@@ -1,0 +1,4 @@
+root = true
+
+[*.dart]
+indent_size = 2
