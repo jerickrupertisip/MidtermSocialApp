@@ -5,13 +5,54 @@ import "package:flutter/services.dart";
 import "package:http/http.dart" as http;
 import "package:shadcn_flutter/shadcn_flutter.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
+import "package:flutter_lorem/flutter_lorem.dart";
 
 void main() {
-  runApp(const MyApp());
+  runApp(App());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class App extends StatefulWidget {
+  const App({super.key});
+
+  @override
+  State<App> createState() => _App();
+}
+
+class _App extends State<App> {
+  Key? _selected = ValueKey(0);
+  final PageController _controller = PageController();
+
+  void _goToPage(int index) {
+    final newKey = ValueKey(index);
+    if (_selected == newKey) return;
+
+    setState(() {
+      _selected = newKey;
+    });
+
+    // _controller.jumpToPage(index);
+    _controller.animateToPage(
+      index,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  NavigationItem buildButton(String label, IconData icon, Key key) {
+    return NavigationItem(
+      key: key,
+      style: ButtonStyle.muted(density: ButtonDensity.icon),
+      selectedStyle: ButtonStyle.fixed(density: ButtonDensity.icon),
+      label: Text(label),
+      child: Icon(icon),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +61,141 @@ class MyApp extends StatelessWidget {
       darkTheme: theme,
       theme: theme,
       themeMode: ThemeMode.system,
-      scaling: const AdaptiveScaling(1.4),
-      home: Home(),
+      // scaling: const AdaptiveScaling(1),
+      home: Scaffold(
+        footers: [
+          NavigationBar(
+            selectedKey: _selected,
+            alignment: .spaceEvenly,
+            onSelected: (key) {
+              var index = (key as ValueKey<int>).value;
+              _goToPage(index);
+            },
+            children: [
+              buildButton("Home", BootstrapIcons.house, ValueKey(0)),
+              buildButton("Unisons", BootstrapIcons.people, ValueKey(1)),
+            ],
+          ),
+        ],
+        child: PageView(
+          controller: _controller,
+          physics: NeverScrollableScrollPhysics(),
+          scrollDirection: .horizontal,
+          children: [Home(), Unisons()],
+        ),
+      ),
+    );
+  }
+}
+
+class Unisons extends StatefulWidget {
+  const Unisons({super.key});
+
+  @override
+  State<Unisons> createState() => _Unisons();
+}
+
+class _Unisons extends State<Unisons> {
+  Key? _selectedUnison = null;
+
+  @override
+  Widget build(BuildContext context) {
+    var padding = Theme.of(context).density.baseContentPadding;
+    return Row(
+      crossAxisAlignment: .stretch,
+      children: [
+        NavigationRail(
+          labelPosition: .end,
+          labelType: .all,
+          header: [Text("Unisons List")],
+          spacing: Theme.of(context).density.baseGap,
+          alignment: .center,
+          onSelected: (key) {
+            setState(() {
+              _selectedUnison = key;
+            });
+          },
+          selectedKey: _selectedUnison,
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                children: List.generate(50, (index) {
+                  return NavigationItem(
+                    key: ValueKey(index),
+                    selectedStyle: ButtonStyle.secondary(),
+                    style: ButtonStyle.ghost(),
+                    label: Text(lorem(paragraphs: 1, words: 1)),
+                    child: Icon(RadixIcons.person),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+        Expanded(
+          child: Column(
+            spacing: Theme.of(context).density.baseGap,
+            children: [
+              Expanded(child: UnisonConversation()),
+              Row(
+                spacing: Theme.of(context).density.baseGap,
+                children: [
+                  Expanded(child: TextField()),
+                  IconButton.primary(
+                    onPressed: () {},
+                    icon: Icon(LucideIcons.sendHorizontal),
+                  ),
+                ],
+              ),
+            ],
+          ).withPadding(all: padding),
+        ),
+      ],
+    );
+  }
+}
+
+class UnisonConversation extends StatefulWidget {
+  const UnisonConversation({super.key});
+
+  @override
+  State<UnisonConversation> createState() => _UnisonConversation();
+}
+
+class _UnisonConversation extends State<UnisonConversation> {
+  final ScrollController _chatScrollController = ScrollController();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: _chatScrollController,
+      itemCount: 20,
+      reverse: true,
+      itemBuilder: (context, index) {
+        var isOther = index % 2 == 0;
+
+        return Column(
+          children: [
+            ChatBubble(
+              color: isOther ? Colors.gray : Colors.blue,
+              type: ChatBubbleType.tail.copyWith(
+                tailAlignment: () => AxisAlignmentDirectional.end,
+                position: () =>
+                    isOther ? AxisDirectional.start : AxisDirectional.end,
+              ),
+              alignment: isOther
+                  ? AxisAlignmentDirectional.start
+                  : AxisAlignmentDirectional.end,
+              child: Text(lorem(paragraphs: 1, words: 4)),
+            ).withPadding(
+              horizontal: isOther
+                  ? 0
+                  : Theme.of(context).density.baseContainerPadding,
+            ),
+            Gap(Theme.of(context).density.baseGap),
+          ],
+        );
+      },
     );
   }
 }
@@ -131,12 +305,12 @@ class _Home extends State<Home> {
                 ),
 
           Positioned(
-            left: padding,
+            right: padding,
             child: Column(
               spacing: Theme.of(context).density.baseGap,
               children: [
                 if (_currentPage > 0)
-                  SecondaryButton(
+                  GhostButton(
                     onPressed: () => _pageController.previousPage(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
@@ -144,7 +318,7 @@ class _Home extends State<Home> {
                     shape: .circle,
                     child: Icon(RadixIcons.chevronUp),
                   ),
-                SecondaryButton(
+                GhostButton(
                   onPressed: () => _pageController.nextPage(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
