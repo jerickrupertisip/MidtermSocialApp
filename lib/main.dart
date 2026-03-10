@@ -109,6 +109,20 @@ class _Unisons extends State<Unisons> {
           labelPosition: .end,
           labelType: .all,
           header: [Text("Unisons List")],
+          footer: [
+            PrimaryButton(
+              // onPressed: () {
+              //   openSheet(
+              //     context: context,
+              //     builder: (context) {
+              //       return MemberList();
+              //     },
+              //     position: .right,
+              //   );
+              // },
+              child: Text("Members List"),
+            ),
+          ],
           spacing: Theme.of(context).density.baseGap,
           alignment: .center,
           onSelected: (key) {
@@ -227,6 +241,7 @@ class _Home extends State<Home> {
   bool _isLoading = false;
 
   static const Curve _pageAnimation = Curves.easeOutCubic;
+
   // Debug
   bool _isLoggedIn = true;
 
@@ -400,6 +415,33 @@ class _Home extends State<Home> {
         ],
       ),
     ).withPadding(all: padding);
+  }
+}
+
+class MemberList extends StatefulWidget {
+  MemberList({super.key});
+
+  @override
+  State<MemberList> createState() => _MemberList();
+}
+
+class _MemberList extends State<MemberList> {
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        children: List.generate(50, (index) {
+          return SecondaryButton(
+            child: Row(
+              children: [
+                Icon(RadixIcons.person),
+                Text(lorem(paragraphs: 1, words: 1)),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
   }
 }
 
