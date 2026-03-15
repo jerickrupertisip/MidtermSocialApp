@@ -59,6 +59,7 @@ class _App extends State<App> {
   Widget build(BuildContext context) {
     var theme = ThemeData.dark(radius: 0.75);
     return ShadcnApp(
+      scrollBehavior: UnisonScrollBehavior(),
       darkTheme: theme,
       theme: theme,
       themeMode: ThemeMode.system,
@@ -89,6 +90,37 @@ class _App extends State<App> {
   }
 }
 
+class MemberList extends StatefulWidget {
+  MemberList({super.key});
+
+  @override
+  State<MemberList> createState() => _MemberList();
+}
+
+class _MemberList extends State<MemberList> {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 200,
+      child: SingleChildScrollView(
+        child: Column(
+          spacing: Theme.of(context).density.baseGap,
+          children: List.generate(50, (index) {
+            return SecondaryButton(
+              child: Row(
+                children: [
+                  Icon(RadixIcons.person),
+                  Text(lorem(paragraphs: 1, words: 1)),
+                ],
+              ),
+            );
+          }),
+        ),
+      ).withPadding(all: Theme.of(context).density.baseContentPadding),
+    );
+  }
+}
+
 class Unisons extends StatefulWidget {
   const Unisons({super.key});
 
@@ -102,25 +134,36 @@ class _Unisons extends State<Unisons> {
   @override
   Widget build(BuildContext context) {
     var padding = Theme.of(context).density.baseContentPadding;
+    var gap = Theme.of(context).density.baseGap;
     return Row(
       crossAxisAlignment: .stretch,
       children: [
         NavigationRail(
           labelPosition: .end,
           labelType: .all,
-          header: [Text("Unisons List")],
+          header: [
+            Text("Unisons List"),
+            Gap(gap),
+            TextField(
+              placeholder: Text("Search unions..."),
+              onChanged: (value) {},
+              features: [
+                InputFeature.clear(),
+                InputLeadingFeature(Icon(RadixIcons.magnifyingGlass)),
+              ],
+            ),
+          ],
           footer: [
             PrimaryButton(
-              // onPressed: () {
-              //   openSheet(
-              //     context: context,
-              //     builder: (context) {
-              //       return MemberList();
-              //     },
-              //     position: .right,
-              //   );
-              // },
-              child: Text("Members List"),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return CreateNewUnisonDialog();
+                  },
+                );
+              },
+              child: Text("Create new Unison"),
             ),
           ],
           spacing: Theme.of(context).density.baseGap,
@@ -151,6 +194,24 @@ class _Unisons extends State<Unisons> {
           child: Column(
             spacing: Theme.of(context).density.baseGap,
             children: [
+              Row(
+                mainAxisAlignment: .end,
+                spacing: Theme.of(context).density.baseGap,
+                children: [
+                  PrimaryButton(
+                    onPressed: () {
+                      openSheet(
+                        context: context,
+                        builder: (context) {
+                          return MemberList();
+                        },
+                        position: .right,
+                      );
+                    },
+                    child: Text("Members List"),
+                  ),
+                ],
+              ),
               Expanded(child: UnisonConversation()),
               Row(
                 spacing: Theme.of(context).density.baseGap,
@@ -165,6 +226,47 @@ class _Unisons extends State<Unisons> {
             ],
           ).withPadding(all: padding),
         ),
+      ],
+    );
+  }
+}
+
+class CreateNewUnisonDialog extends StatefulWidget {
+  const CreateNewUnisonDialog({super.key});
+
+  @override
+  State<CreateNewUnisonDialog> createState() => _CreateNewUnisonDialog();
+}
+
+class _CreateNewUnisonDialog extends State<CreateNewUnisonDialog> {
+  final TextFieldKey _nameKey = TextFieldKey("name");
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Create new Unison"),
+      content: Form(
+        child: Column(
+          mainAxisSize: .min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FormField(
+              key: _nameKey,
+              label: Text("Name"),
+              validator: LengthValidator(min: 4),
+              child: TextField(hintText: "Name"),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        SecondaryButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text("Cancel"),
+        ),
+        PrimaryButton(onPressed: () {}, child: Text("Create")),
       ],
     );
   }
@@ -215,7 +317,7 @@ class _UnisonConversation extends State<UnisonConversation> {
   }
 }
 
-class Scroller extends ScrollBehavior {
+class UnisonScrollBehavior extends ShadcnScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
     PointerDeviceKind.touch,
@@ -317,131 +419,98 @@ class _Home extends State<Home> {
   @override
   Widget build(BuildContext context) {
     var padding = Theme.of(context).density.baseContentPadding;
-    return ScrollConfiguration(
-      behavior: Scroller(),
-      child: Stack(
-        alignment: .center,
-        children: [
-          _images.isEmpty
-              ? CenteredCircularProgress()
-              : PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  itemCount: _images.length,
-                  onPageChanged: (page) {
-                    setState(() {
-                      _currentPage = page;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    var image = _images[index];
-                    var theme = Theme.of(context);
+    return Stack(
+      alignment: .center,
+      children: [
+        _images.isEmpty
+            ? CenteredCircularProgress()
+            : PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: _images.length,
+                onPageChanged: (page) {
+                  setState(() {
+                    _currentPage = page;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  var image = _images[index];
+                  var theme = Theme.of(context);
 
-                    return PostPage(image: image, theme: theme);
-                  },
-                ),
-          if (kDebugMode)
-            Positioned(top: padding, child: Text("Page $_currentPage")),
-          Positioned(
-            right: padding,
-            child: Column(
-              spacing: Theme.of(context).density.baseGap,
-              children: [
-                if (_currentPage > 0)
-                  GhostButton(
-                    onPressed: () {
-                      previousPage();
-                    },
-                    shape: .circle,
-                    child: Icon(RadixIcons.chevronUp),
-                  ),
+                  return PostPage(image: image, theme: theme);
+                },
+              ),
+        if (kDebugMode)
+          Positioned(top: padding, child: Text("Page $_currentPage")),
+        Positioned(
+          right: padding,
+          child: Column(
+            spacing: Theme.of(context).density.baseGap,
+            children: [
+              if (_currentPage > 0)
                 GhostButton(
                   onPressed: () {
-                    nextPage();
+                    previousPage();
                   },
                   shape: .circle,
-                  child: Icon(RadixIcons.chevronDown),
+                  child: Icon(RadixIcons.chevronUp),
                 ),
-              ],
-            ),
+              GhostButton(
+                onPressed: () {
+                  nextPage();
+                },
+                shape: .circle,
+                child: Icon(RadixIcons.chevronDown),
+              ),
+            ],
           ),
-          Positioned(
-            top: 0.0,
-            left: 0.0,
-            child: Row(
-              spacing: padding,
-              children: [
-                _isLoggedIn
-                    ? Pressable(
-                        onPressed: () {
-                          setState(() {
-                            _isLoggedIn = !_isLoggedIn;
-                          });
-                        },
-                        child: Avatar(
-                          initials: Avatar.getInitials("unison"),
-                          provider: CachedNetworkImageProvider(
-                            "https://avatars.githubusercontent.com/u/64018564?v=4",
-                          ),
-                          size: Theme.of(context).typography.h1.fontSize,
+        ),
+        Positioned(
+          top: 0.0,
+          left: 0.0,
+          child: Row(
+            spacing: padding,
+            children: [
+              _isLoggedIn
+                  ? Pressable(
+                      onPressed: () {
+                        setState(() {
+                          _isLoggedIn = !_isLoggedIn;
+                        });
+                      },
+                      child: Avatar(
+                        initials: Avatar.getInitials("unison"),
+                        provider: CachedNetworkImageProvider(
+                          "https://avatars.githubusercontent.com/u/64018564?v=4",
                         ),
-                      )
-                    : IconButton.primary(
-                        onPressed: () {
-                          setState(() {
-                            _isLoggedIn = !_isLoggedIn;
-                          });
-                        },
-                        shape: .circle,
-                        icon: Icon(
-                          RadixIcons.person,
-                          color: Theme.of(context).colorScheme.background,
-                        ),
+                        size: Theme.of(context).typography.h1.fontSize,
                       ),
-                Text(
-                  "Your name",
-                  style: TextStyle(
-                    shadows: [
-                      Shadow(
-                        offset: Offset.fromDirection(10, 2),
-                        blurRadius: 6,
+                    )
+                  : IconButton.primary(
+                      onPressed: () {
+                        setState(() {
+                          _isLoggedIn = !_isLoggedIn;
+                        });
+                      },
+                      shape: .circle,
+                      icon: Icon(
+                        RadixIcons.person,
+                        color: Theme.of(context).colorScheme.background,
                       ),
-                    ],
-                  ),
+                    ),
+              Text(
+                "Your name",
+                style: TextStyle(
+                  shadows: [
+                    Shadow(offset: Offset.fromDirection(10, 2), blurRadius: 6),
+                  ],
                 ),
-              ],
-            ).withPadding(all: padding),
-          ),
-        ],
-      ),
+              ),
+            ],
+          ).withPadding(all: padding),
+        ),
+      ],
     ).withPadding(all: padding);
-  }
-}
-
-class MemberList extends StatefulWidget {
-  MemberList({super.key});
-
-  @override
-  State<MemberList> createState() => _MemberList();
-}
-
-class _MemberList extends State<MemberList> {
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: List.generate(50, (index) {
-          return SecondaryButton(
-            child: Row(
-              children: [
-                Icon(RadixIcons.person),
-                Text(lorem(paragraphs: 1, words: 1)),
-              ],
-            ),
-          );
-        }),
-      ),
-    );
   }
 }
 
