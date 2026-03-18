@@ -7,8 +7,16 @@ import "package:http/http.dart" as http;
 import "package:shadcn_flutter/shadcn_flutter.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:flutter_lorem/flutter_lorem.dart";
+import "package:supabase_flutter/supabase_flutter.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
 
-void main() {
+void main() async {
+  await dotenv.load();
+  await Supabase.initialize(
+    url: dotenv.env["API_URL"]!,
+    anonKey: dotenv.env["ANON_KEY"]!,
+  );
+
   runApp(App());
 }
 
