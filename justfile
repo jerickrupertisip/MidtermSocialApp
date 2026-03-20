@@ -10,6 +10,10 @@ open-studio:
   eval $(supabase status -o env | grep STUDIO_URL)
   start "$STUDIO_URL"
 
+[linux]
+start:
+  supabase start -x edge-runtime
+
 show-db-url:
   #!/usr/bin/env bash
   eval $(cat ./supabase/docker/.env | grep --extended-regexp '(POSTGRES_PASSWORD|POSTGRES_EXTERNAL_PORT)')
