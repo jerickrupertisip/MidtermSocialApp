@@ -12,7 +12,11 @@ open-studio:
 
 [linux]
 start:
-  supabase start -x edge-runtime
+  supabase start
+
+[linux]
+stop:
+  supabase stop
 
 show-db-url:
   #!/usr/bin/env bash
