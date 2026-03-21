@@ -223,6 +223,46 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreen extends State<ChatScreen> {
+  final TextEditingController _inputMessageController = TextEditingController();
+  var _isSending = false;
+
+  @override
+  void dispose() {
+    _inputMessageController.dispose();
+    super.dispose();
+  }
+
+  void sendMessage() async {
+    var content = _inputMessageController.text;
+    _inputMessageController.text = "";
+    if (content.isEmpty) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isSending = true;
+      });
+
+      await Supabase.instance.client.from("messages").insert({
+        "content": content,
+      });
+
+      setState(() {
+        _isSending = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+      setState(() {
+        _inputMessageController.text = content;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -257,15 +297,20 @@ class _ChatScreen extends State<ChatScreen> {
         UnisonConversation(),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: TextField(
+                controller: _inputMessageController,
+                onSubmitted: (_) => sendMessage(),
                 decoration: InputDecoration(
                   hintText: "Enter your message...",
                   border: OutlineInputBorder(),
                 ),
               ),
             ),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.send)),
+            IconButton(
+              onPressed: _isSending ? null : sendMessage,
+              icon: const Icon(Icons.send),
+            ),
           ],
         ),
       ],
