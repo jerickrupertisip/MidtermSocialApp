@@ -61,7 +61,7 @@ class _App extends State<App> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(),
+      theme: ThemeData.dark(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
       home: Scaffold(
@@ -672,7 +672,9 @@ class _Home extends State<Home> {
             top: 16,
             child: Text(
               "Page $_currentPage",
-              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+              style: TextStyle(
+                color: Colors.white,
+              ),
             ),
           ),
         Positioned(
@@ -729,7 +731,7 @@ class _Home extends State<Home> {
                 Text(
                   "Your name",
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Colors.white,
                     shadows: [
                       Shadow(
                         offset: Offset.fromDirection(10, 2),
@@ -822,7 +824,7 @@ class _PostPage extends State<PostPage> {
                 child: Text(
                   widget.image.author,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    color: Colors.white,
                     shadows: [
                       Shadow(
                         offset: Offset.fromDirection(10, 2),
