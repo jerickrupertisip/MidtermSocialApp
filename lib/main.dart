@@ -8,6 +8,7 @@ import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:flutter_lorem/flutter_lorem.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:chat_bubbles/chat_bubbles.dart";
 
 Future<void> initializeSupabase() async {
   var apiUrl = dotenv.env["API_URL"];
@@ -307,25 +308,12 @@ class _UnisonConversation extends State<UnisonConversation> {
       reverse: true,
       itemBuilder: (context, index) {
         bool isOther = index % 2 == 0;
-        return Column(
-          children: [
-            Align(
-              alignment: isOther ? Alignment.centerLeft : Alignment.centerRight,
-              child: Container(
-                margin: EdgeInsets.only(
-                  left: isOther ? 16 : 64,
-                  right: isOther ? 64 : 16,
-                  bottom: 8,
-                ),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isOther ? Colors.grey[800] : Colors.blue,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(lorem(paragraphs: 1, words: 4)),
-              ),
-            ),
-          ],
+        return BubbleNormal(
+          text: lorem(paragraphs: 1, words: 4),
+          isSender: !isOther,
+          color: isOther ? Colors.grey[800]! : Colors.blue,
+          tail: true,
+          textStyle: const TextStyle(color: Colors.white),
         );
       },
     );
