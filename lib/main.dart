@@ -139,9 +139,41 @@ class _Unisons extends State<Unisons> {
           width: 250,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text("Unisons List"),
+              Row(
+                mainAxisAlignment: .spaceBetween,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text("Unisons List"),
+                  ),
+                  MenuAnchor(
+                    menuChildren: [
+                      MenuItemButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return const CreateNewUnisonDialog();
+                            },
+                          );
+                        },
+                        child: const Text("Create new Unison"),
+                      ),
+                    ],
+                    builder: (context, controller, child) {
+                      return IconButton(
+                        onPressed: () {
+                          if (controller.isOpen) {
+                            controller.close();
+                          } else {
+                            controller.open();
+                          }
+                        },
+                        icon: Icon(Icons.list),
+                      );
+                    },
+                  ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -168,20 +200,6 @@ class _Unisons extends State<Unisons> {
                       },
                     );
                   },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        return const CreateNewUnisonDialog();
-                      },
-                    );
-                  },
-                  child: const Text("Create new Unison"),
                 ),
               ),
             ],
@@ -222,7 +240,14 @@ class _Unisons extends State<Unisons> {
                 const Expanded(child: UnisonConversation()),
                 Row(
                   children: [
-                    const Expanded(child: TextField()),
+                    const Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Enter your message...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
                     IconButton(onPressed: () {}, icon: const Icon(Icons.send)),
                   ],
                 ),
@@ -304,16 +329,61 @@ class _UnisonConversation extends State<UnisonConversation> {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: _chatScrollController,
-      itemCount: 20,
+      itemCount: 50,
       reverse: true,
+      padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
       itemBuilder: (context, index) {
         bool isOther = index % 2 == 0;
-        return BubbleNormal(
-          text: lorem(paragraphs: 1, words: 4),
-          isSender: !isOther,
-          color: isOther ? Colors.grey[800]! : Colors.blue,
-          tail: true,
-          textStyle: const TextStyle(color: Colors.white),
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar
+              CircleAvatar(
+                backgroundColor: isOther ? Colors.orange : Colors.indigo,
+                child: const Icon(Icons.person, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              // Message Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: Username and Timestamp
+                    Row(
+                      children: [
+                        Text(
+                          isOther ? "User A" : "User B",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Today at 4:30 PM",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.color?.withValues(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    // Message Body
+                    Text(
+                      lorem(paragraphs: 1, words: 10),
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
