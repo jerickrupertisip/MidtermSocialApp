@@ -33,10 +33,13 @@ const _kOverlayTextStyle = TextStyle(
 // Helpers
 // ---------------------------------------------------------------------------
 
-void showSnackBar(BuildContext context, String message) {
+void debugLog(BuildContext context, String message) {
+  if (!kDebugMode) return;
+
   final messenger = ScaffoldMessenger.of(context);
   messenger.clearSnackBars();
   messenger.showSnackBar(SnackBar(content: Text(message)));
+  debugPrint(message);
 }
 
 // ---------------------------------------------------------------------------
@@ -201,7 +204,7 @@ class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
       final groups = await Supabase.instance.client.from("unions").select("*");
       setState(() => _unisonGroups = UnisonGroup.fromList(groups));
     } catch (fetchError) {
-      if (mounted) showSnackBar(context, fetchError.toString());
+      if (mounted) debugLog(context, fetchError.toString());
     }
   }
 
@@ -303,7 +306,7 @@ class _UnisonActionsMenu extends StatelessWidget {
           child: const Text("Create new Unison"),
         ),
       ],
-      builder: (_, menuController, __) {
+      builder: (_, menuController, _) {
         return IconButton(
           onPressed: () => menuController.isOpen
               ? menuController.close()
@@ -449,7 +452,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       );
     } catch (sendError) {
       if (mounted) {
-        showSnackBar(context, sendError.toString());
+        debugLog(context, sendError.toString());
         setState(() => _outgoingMessageController.text = messageContent);
       }
     } finally {
@@ -555,8 +558,8 @@ class UnisonMemberList extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: ListView.separated(
           itemCount: 50,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (_, __) => const _MemberListItem(),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (_, _) => const _MemberListItem(),
         ),
       ),
     );
@@ -649,16 +652,13 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
   }
 
   Future<void> _fetchMoreMessages() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() => _isFetchingMessages = true);
 
     try {
       final fetchedMessages = await _fetchMoreMessagesFromDatabase();
       setState(() => _loadedMessages.insertAll(0, fetchedMessages));
     } catch (fetchError) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(fetchError.toString())),
-      );
+      if (mounted) debugLog(context, fetchError.toString());
     }
 
     if (mounted) {
@@ -1015,7 +1015,7 @@ class FullScreenPostPage extends StatelessWidget {
       fadeInDuration: Duration.zero,
       imageUrl: postImage.downloadUrl,
       fit: BoxFit.cover,
-      progressIndicatorBuilder: (_, __, downloadProgress) =>
+      progressIndicatorBuilder: (_, _, downloadProgress) =>
           FullScreenLoadingIndicator(
             loadingProgress: downloadProgress.progress,
           ),
