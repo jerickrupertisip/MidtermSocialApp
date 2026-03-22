@@ -30,6 +30,100 @@ const _kOverlayTextStyle = TextStyle(
 );
 
 // ---------------------------------------------------------------------------
+// SupabaseService — all Supabase-specific logic lives here
+// ---------------------------------------------------------------------------
+
+class SupabaseService {
+  SupabaseService._();
+
+  // ---------- Initialisation ----------
+
+  /// Loads environment variables and initialises the Supabase client.
+  /// Call this once from [main] before [runApp].
+  static Future<void> initialize() async {
+    try {
+      await dotenv.load(fileName: "supabase/.env", isOptional: true);
+    } finally {}
+
+    final supabaseApiUrl = dotenv.env["API_URL"];
+    final supabaseAnonKey = dotenv.env["ANON_KEY"];
+
+    if (supabaseApiUrl != null && supabaseAnonKey != null) {
+      await Supabase.initialize(url: supabaseApiUrl, anonKey: supabaseAnonKey);
+    }
+  }
+
+  // ---------- Unison groups ----------
+
+  /// Fetches all rows from the `unions` table and returns them as a typed
+  /// list of [UnisonGroup] models.
+  static Future<List<UnisonGroup>> fetchUnisonGroups() async {
+    final rows =
+        await Supabase.instance.client.from("unions").select("*");
+    return UnisonGroup.fromList(rows);
+  }
+
+  // ---------- Realtime channels ----------
+
+  /// Creates (but does not subscribe to) a broadcast channel scoped to
+  /// [groupId]. Returns `null` when [groupId] is null so callers can handle
+  /// the "no group selected" state without extra null checks.
+  static RealtimeChannel? openMessageChannel(String? groupId) {
+    if (groupId == null) return null;
+    return Supabase.instance.client.channel(
+      "room:$groupId:messages",
+      opts: RealtimeChannelConfig(self: true),
+    );
+  }
+
+  // ---------- Messages ----------
+
+  /// Persists a new message to the `messages` table and returns the inserted
+  /// row so it can be immediately broadcast on the realtime channel.
+  static Future<Map<String, dynamic>> sendMessage({
+    required String content,
+    required String groupId,
+  }) async {
+    return await Supabase.instance.client
+        .from("messages")
+        .insert({"content": content, "union_id": groupId})
+        .select()
+        .single();
+  }
+
+  /// Broadcasts [messageData] over [channel] using the `message_sent` event.
+  static void broadcastMessage({
+    required RealtimeChannel channel,
+    required Map<String, dynamic> messageData,
+  }) {
+    channel.sendBroadcastMessage(
+      event: "message_sent",
+      payload: messageData,
+    );
+  }
+
+  /// Fetches a page of messages for [unisonId], ordered newest-first.
+  ///
+  /// [alreadyLoaded] is the current list length and is used to calculate the
+  /// query range so that already-fetched messages are not re-fetched.
+  static Future<List<Message>> fetchMessages({
+    required String unisonId,
+    required int alreadyLoaded,
+    int pageSize = 20,
+  }) async {
+    final rows = await Supabase.instance.client
+        .from("messages")
+        .select("content, created_at")
+        .eq("union_id", unisonId)
+        .limit(pageSize)
+        .order("created_at", ascending: false)
+        .range(alreadyLoaded, alreadyLoaded + pageSize);
+
+    return Message.fromList(rows).reversed.toList();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -46,22 +140,8 @@ void debugLog(BuildContext context, String message) {
 // Initialisation
 // ---------------------------------------------------------------------------
 
-Future<void> initializeSupabaseClient() async {
-  final supabaseApiUrl = dotenv.env["API_URL"];
-  final supabaseAnonKey = dotenv.env["ANON_KEY"];
-
-  if (supabaseApiUrl != null && supabaseAnonKey != null) {
-    await Supabase.initialize(url: supabaseApiUrl, anonKey: supabaseAnonKey);
-  }
-}
-
 void main() async {
-  try {
-    await dotenv.load(fileName: "supabase/.env", isOptional: true);
-  } finally {}
-
-  await initializeSupabaseClient();
-
+  await SupabaseService.initialize();
   runApp(const SocialMediaApp());
 }
 
@@ -188,9 +268,7 @@ class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
   final ScrollController _unisonGroupsScrollController = ScrollController();
 
   void _onGroupTapped(int groupIndex) {
-    if (_selectedGroupIndex == groupIndex) {
-      return;
-    }
+    if (_selectedGroupIndex == groupIndex) return;
     setState(() => _selectedGroupIndex = groupIndex);
     widget.onUnisonGroupSelected(_unisonGroups[groupIndex]);
   }
@@ -199,10 +277,12 @@ class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
     showDialog(context: context, builder: (_) => const CreateNewUnisonDialog());
   }
 
+  /// Delegates the network call to [SupabaseService]; this widget only
+  /// handles the resulting state update and error display.
   Future<void> _fetchGroups() async {
     try {
-      final groups = await Supabase.instance.client.from("unions").select("*");
-      setState(() => _unisonGroups = UnisonGroup.fromList(groups));
+      final groups = await SupabaseService.fetchUnisonGroups();
+      setState(() => _unisonGroups = groups);
     } catch (fetchError) {
       if (mounted) debugLog(context, fetchError.toString());
     }
@@ -407,16 +487,10 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.unisonGroup?.id != widget.unisonGroup?.id) {
       _supabaseRoomChannel?.unsubscribe();
-      _supabaseRoomChannel = _openChannelForGroup(widget.unisonGroup?.id);
+      // Delegate channel creation to the service.
+      _supabaseRoomChannel =
+          SupabaseService.openMessageChannel(widget.unisonGroup?.id);
     }
-  }
-
-  RealtimeChannel? _openChannelForGroup(String? groupId) {
-    if (groupId == null) return null;
-    return Supabase.instance.client.channel(
-      "room:$groupId:messages",
-      opts: RealtimeChannelConfig(self: true),
-    );
   }
 
   @override
@@ -440,15 +514,14 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
     setState(() => _isMessageSending = true);
 
     try {
-      final insertedMessageData = await Supabase.instance.client
-          .from("messages")
-          .insert({"content": messageContent, "union_id": groupId})
-          .select()
-          .single();
-
-      channel.sendBroadcastMessage(
-        event: "message_sent",
-        payload: insertedMessageData,
+      // Delegate persistence and broadcast to the service.
+      final insertedMessageData = await SupabaseService.sendMessage(
+        content: messageContent,
+        groupId: groupId,
+      );
+      SupabaseService.broadcastMessage(
+        channel: channel,
+        messageData: insertedMessageData,
       );
     } catch (sendError) {
       if (mounted) {
@@ -604,7 +677,6 @@ class UnisonMessageFeed extends StatefulWidget {
 class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
   final ScrollController _messageFeedScrollController = ScrollController();
   final List<Message> _loadedMessages = [];
-  final int _messagePageSize = 20;
   double _messageFeedScrollOffset = 0;
   bool _isFetchingMessages = false;
 
@@ -636,33 +708,21 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
     });
   }
 
-  Future<List<Message>> _fetchMoreMessagesFromDatabase() async {
-    final fetchedMessages = await Supabase.instance.client
-        .from("messages")
-        .select("content, created_at")
-        .eq("union_id", widget.unisonID)
-        .limit(_messagePageSize)
-        .order("created_at", ascending: false)
-        .range(
-          _loadedMessages.length,
-          _loadedMessages.length + _messagePageSize,
-        );
-
-    return Message.fromList(fetchedMessages).reversed.toList();
-  }
-
+  /// Delegates the database query to [SupabaseService]; this widget only
+  /// manages list state and loading/error display.
   Future<void> _fetchMoreMessages() async {
     setState(() => _isFetchingMessages = true);
 
     try {
-      final fetchedMessages = await _fetchMoreMessagesFromDatabase();
+      final fetchedMessages = await SupabaseService.fetchMessages(
+        unisonId: widget.unisonID,
+        alreadyLoaded: _loadedMessages.length,
+      );
       setState(() => _loadedMessages.insertAll(0, fetchedMessages));
     } catch (fetchError) {
       if (mounted) debugLog(context, fetchError.toString());
-    }
-
-    if (mounted) {
-      setState(() => _isFetchingMessages = false);
+    } finally {
+      if (mounted) setState(() => _isFetchingMessages = false);
     }
   }
 
