@@ -1,5 +1,6 @@
 import "dart:convert";
 import "package:cached_network_image/cached_network_image.dart";
+import "package:easy_refresh/easy_refresh.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
@@ -126,6 +127,7 @@ class UnisonsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(width: _kSidebarWidth, child: UnisonGroupSidebar()),
+        VerticalDivider(),
         Expanded(
           child: Padding(
             padding: EdgeInsets.all(16.0),
@@ -504,9 +506,11 @@ class UnisonMessageFeed extends StatefulWidget {
 
 class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
   final ScrollController _messageFeedScrollController = ScrollController();
-  List<Message> _loadedMessages = [];
   double _messageFeedScrollOffset = 0;
   bool _isFetchingMessages = false;
+
+  final List<Message> _loadedMessages = [];
+  final int _messageCount = 20;
 
   @override
   void initState() {
@@ -536,22 +540,26 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
     });
   }
 
-  Future<List<Message>> _fetchMessagesFromDatabase() async {
+  Future<List<Message>> _fetchMoreMessagesFromDatabase() async {
     final fetchedMessages = await Supabase.instance.client
         .from("messages")
         .select("content, created_at")
-        .order("created_at", ascending: true);
+        .limit(_messageCount)
+        .order("created_at", ascending: false)
+        .range(_loadedMessages.length, _loadedMessages.length + _messageCount);
 
-    return Message.fromList(fetchedMessages);
+    return Message.fromList(fetchedMessages).reversed.toList();
   }
 
-  Future<void> _fetchAndDisplayMessages() async {
+  Future<void> _fetchMoreMessages() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() => _isFetchingMessages = true);
 
     try {
-      final fetchedMessages = await _fetchMessagesFromDatabase();
-      setState(() => _loadedMessages = fetchedMessages);
+      final fetchedMessages = await _fetchMoreMessagesFromDatabase();
+      setState(() {
+        _loadedMessages.insertAll(0, fetchedMessages);
+      });
     } catch (fetchError) {
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text(fetchError.toString())),
@@ -582,13 +590,27 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
     );
   }
 
+  void _refreshMessages() async {
+    _fetchMoreMessages();
+  }
+
   Widget _buildMessageList() {
-    return ListView.builder(
-      controller: _messageFeedScrollController,
-      itemCount: _loadedMessages.length + 1,
-      reverse: true,
-      padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
-      itemBuilder: _buildMessageListItem,
+    return EasyRefresh(
+      header: MaterialHeader(),
+      refreshOnStart: true,
+      footer: MaterialFooter(
+        position: IndicatorPosition.above,
+        clamping: false,
+      ),
+      onLoad: _refreshMessages,
+      onRefresh: _refreshMessages,
+      child: ListView.builder(
+        controller: _messageFeedScrollController,
+        itemCount: _loadedMessages.length + 1,
+        reverse: true,
+        padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
+        itemBuilder: _buildMessageListItem,
+      ),
     );
   }
 
@@ -615,7 +637,7 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
       child: _isFetchingMessages
           ? const CircularProgressIndicator()
           : TextButton(
-              onPressed: _fetchAndDisplayMessages,
+              onPressed: _fetchMoreMessages,
               child: const Text("Load more messages"),
             ),
     );
