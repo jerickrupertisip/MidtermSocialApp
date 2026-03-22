@@ -603,7 +603,7 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
         clamping: false,
       ),
       onLoad: _refreshMessages,
-      onRefresh: _refreshMessages,
+      onRefresh: _loadedMessages.isEmpty ? _refreshMessages : null,
       child: ListView.builder(
         controller: _messageFeedScrollController,
         itemCount: _loadedMessages.length + 1,
