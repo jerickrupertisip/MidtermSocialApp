@@ -11,12 +11,12 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:intl/intl.dart";
 
-Future<void> initializeSupabase() async {
-  var apiUrl = dotenv.env["API_URL"];
-  var anonKey = dotenv.env["ANON_KEY"];
+Future<void> initializeSupabaseClient() async {
+  var supabaseApiUrl = dotenv.env["API_URL"];
+  var supabaseAnonKey = dotenv.env["ANON_KEY"];
 
-  if (apiUrl != null && anonKey != null) {
-    await Supabase.initialize(url: apiUrl, anonKey: anonKey);
+  if (supabaseApiUrl != null && supabaseAnonKey != null) {
+    await Supabase.initialize(url: supabaseApiUrl, anonKey: supabaseAnonKey);
   }
 }
 
@@ -25,28 +25,28 @@ void main() async {
     await dotenv.load(fileName: "supabase/.env", isOptional: true);
   } finally {}
 
-  await initializeSupabase();
+  await initializeSupabaseClient();
 
-  runApp(App());
+  runApp(SocialMediaApp());
 }
 
-class App extends StatefulWidget {
-  const App({super.key});
+class SocialMediaApp extends StatefulWidget {
+  const SocialMediaApp({super.key});
 
   @override
-  State<App> createState() => _App();
+  State<SocialMediaApp> createState() => _SocialMediaAppState();
 }
 
-class _App extends State<App> {
-  int _selectedIndex = 0;
-  final PageController _controller = PageController();
+class _SocialMediaAppState extends State<SocialMediaApp> {
+  int _activeBottomNavIndex = 0;
+  final PageController _bottomNavPageController = PageController();
 
-  void _onItemTapped(int index) {
+  void _onBottomNavItemTapped(int tappedIndex) {
     setState(() {
-      _selectedIndex = index;
+      _activeBottomNavIndex = tappedIndex;
     });
-    _controller.animateToPage(
-      index,
+    _bottomNavPageController.animateToPage(
+      tappedIndex,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -54,7 +54,7 @@ class _App extends State<App> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _bottomNavPageController.dispose();
     super.dispose();
   }
 
@@ -66,13 +66,13 @@ class _App extends State<App> {
       themeMode: ThemeMode.system,
       home: Scaffold(
         body: PageView(
-          controller: _controller,
+          controller: _bottomNavPageController,
           physics: const NeverScrollableScrollPhysics(),
-          children: const [Home(), Unisons()],
+          children: const [HomeFeedScreen(), UnisonsScreen()],
         ),
         bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
+          currentIndex: _activeBottomNavIndex,
+          onTap: _onBottomNavItemTapped,
           items: [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
             BottomNavigationBarItem(icon: Icon(Icons.people), label: "Unisons"),
@@ -83,14 +83,14 @@ class _App extends State<App> {
   }
 }
 
-class MemberList extends StatefulWidget {
-  const MemberList({super.key});
+class UnisonMemberList extends StatefulWidget {
+  const UnisonMemberList({super.key});
 
   @override
-  State<MemberList> createState() => _MemberList();
+  State<UnisonMemberList> createState() => _UnisonMemberListState();
 }
 
-class _MemberList extends State<MemberList> {
+class _UnisonMemberListState extends State<UnisonMemberList> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -100,7 +100,7 @@ class _MemberList extends State<MemberList> {
         child: SingleChildScrollView(
           child: Column(
             children:
-                List.generate(50, (index) {
+                List.generate(50, (memberIndex) {
                       return TextButton(
                         onPressed: () {},
                         child: Row(
@@ -111,7 +111,12 @@ class _MemberList extends State<MemberList> {
                         ),
                       );
                     })
-                    .expand((widget) => [widget, const SizedBox(height: 8)])
+                    .expand(
+                      (memberWidget) => [
+                        memberWidget,
+                        const SizedBox(height: 8),
+                      ],
+                    )
                     .toList()
                   ..removeLast(),
           ),
@@ -121,16 +126,16 @@ class _MemberList extends State<MemberList> {
   }
 }
 
-class UnisonsSidebar extends StatefulWidget {
-  const UnisonsSidebar({super.key});
+class UnisonGroupSidebar extends StatefulWidget {
+  const UnisonGroupSidebar({super.key});
 
   @override
-  State<UnisonsSidebar> createState() => _UnisonsSidebar();
+  State<UnisonGroupSidebar> createState() => _UnisonGroupSidebarState();
 }
 
-class _UnisonsSidebar extends State<UnisonsSidebar> {
-  int? _selectedUnisonIndex;
-  var groups = List.generate(50, (index) {
+class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
+  int? _selectedGroupIndex;
+  var unisonGroupNames = List.generate(50, (groupIndex) {
     return lorem(paragraphs: 1, words: 1);
   });
 
@@ -143,7 +148,7 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
           child: Column(
             children: [
               Row(
-                mainAxisAlignment: .spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Padding(
                     padding: EdgeInsets.all(16.0),
@@ -155,7 +160,7 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
                         onPressed: () {
                           showDialog(
                             context: context,
-                            builder: (context) {
+                            builder: (dialogContext) {
                               return const CreateNewUnisonDialog();
                             },
                           );
@@ -163,13 +168,13 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
                         child: const Text("Create new Unison"),
                       ),
                     ],
-                    builder: (context, controller, child) {
+                    builder: (menuContext, menuController, menuChild) {
                       return IconButton(
                         onPressed: () {
-                          if (controller.isOpen) {
-                            controller.close();
+                          if (menuController.isOpen) {
+                            menuController.close();
                           } else {
-                            controller.open();
+                            menuController.open();
                           }
                         },
                         icon: Icon(Icons.list),
@@ -185,7 +190,7 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
                     hintText: "Search unions...",
                     prefixIcon: Icon(Icons.search),
                   ),
-                  onChanged: (value) {},
+                  onChanged: (searchQuery) {},
                 ),
               ),
             ],
@@ -193,17 +198,17 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
         ),
         Expanded(
           child: ListView.builder(
-            itemCount: groups.length,
-            itemBuilder: (context, index) {
+            itemCount: unisonGroupNames.length,
+            itemBuilder: (listContext, groupIndex) {
               return ListTile(
                 leading: const Icon(Icons.person),
-                title: Text(groups[index]),
-                selected: _selectedUnisonIndex == index,
-                selectedTileColor: Theme.of(context).colorScheme.primary,
-                selectedColor: Theme.of(context).colorScheme.onPrimary,
+                title: Text(unisonGroupNames[groupIndex]),
+                selected: _selectedGroupIndex == groupIndex,
+                selectedTileColor: Theme.of(listContext).colorScheme.primary,
+                selectedColor: Theme.of(listContext).colorScheme.onPrimary,
                 onTap: () {
                   setState(() {
-                    _selectedUnisonIndex = index;
+                    _selectedGroupIndex = groupIndex;
                   });
                 },
               );
@@ -215,23 +220,24 @@ class _UnisonsSidebar extends State<UnisonsSidebar> {
   }
 }
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class UnisonChatInputScreen extends StatefulWidget {
+  const UnisonChatInputScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreen();
+  State<UnisonChatInputScreen> createState() => _UnisonChatInputScreenState();
 }
 
-class _ChatScreen extends State<ChatScreen> {
-  final TextEditingController _inputMessageController = TextEditingController();
-  late RealtimeChannel roomChannel;
-  var _isSending = false;
+class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
+  final TextEditingController _outgoingMessageController =
+      TextEditingController();
+  late RealtimeChannel supabaseRoomChannel;
+  var _isMessageSending = false;
 
   @override
   void initState() {
     super.initState();
 
-    roomChannel = Supabase.instance.client.channel(
+    supabaseRoomChannel = Supabase.instance.client.channel(
       "room:messages",
       opts: RealtimeChannelConfig(self: true),
     );
@@ -239,43 +245,46 @@ class _ChatScreen extends State<ChatScreen> {
 
   @override
   void dispose() {
-    _inputMessageController.dispose();
-    roomChannel.unsubscribe();
+    _outgoingMessageController.dispose();
+    supabaseRoomChannel.unsubscribe();
 
     super.dispose();
   }
 
-  void sendMessage() async {
-    var content = _inputMessageController.text;
-    _inputMessageController.text = "";
-    if (content.isEmpty) {
+  void submitOutgoingMessage() async {
+    var messageContent = _outgoingMessageController.text;
+    _outgoingMessageController.text = "";
+    if (messageContent.isEmpty) {
       return;
     }
 
     try {
       setState(() {
-        _isSending = true;
+        _isMessageSending = true;
       });
 
-      var data = await Supabase.instance.client
+      var insertedMessageData = await Supabase.instance.client
           .from("messages")
-          .insert({"content": content})
+          .insert({"content": messageContent})
           .select()
           .single();
 
-      roomChannel.sendBroadcastMessage(event: "message_sent", payload: data);
+      supabaseRoomChannel.sendBroadcastMessage(
+        event: "message_sent",
+        payload: insertedMessageData,
+      );
 
       setState(() {
-        _isSending = false;
+        _isMessageSending = false;
       });
-    } catch (e) {
+    } catch (sendError) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(sendError.toString())));
       }
       setState(() {
-        _inputMessageController.text = content;
+        _outgoingMessageController.text = messageContent;
       });
     }
   }
@@ -292,14 +301,14 @@ class _ChatScreen extends State<ChatScreen> {
                 showDialog(
                   context: context,
                   barrierDismissible: true,
-                  builder: (context) {
+                  builder: (overlayContext) {
                     return Align(
                       alignment: Alignment.centerRight,
                       child: Material(
                         child: SizedBox(
                           width: 200,
                           height: double.infinity,
-                          child: const MemberList(),
+                          child: const UnisonMemberList(),
                         ),
                       ),
                     );
@@ -311,13 +320,13 @@ class _ChatScreen extends State<ChatScreen> {
           ],
         ),
         Divider(),
-        UnisonConversation(roomChannel: roomChannel),
+        UnisonMessageFeed(realtimeRoomChannel: supabaseRoomChannel),
         Row(
           children: [
             Expanded(
               child: TextField(
-                controller: _inputMessageController,
-                onSubmitted: (_) => sendMessage(),
+                controller: _outgoingMessageController,
+                onSubmitted: (_) => submitOutgoingMessage(),
                 decoration: InputDecoration(
                   hintText: "Enter your message...",
                   border: OutlineInputBorder(),
@@ -325,7 +334,7 @@ class _ChatScreen extends State<ChatScreen> {
               ),
             ),
             IconButton(
-              onPressed: _isSending ? null : sendMessage,
+              onPressed: _isMessageSending ? null : submitOutgoingMessage,
               icon: const Icon(Icons.send),
             ),
           ],
@@ -335,24 +344,24 @@ class _ChatScreen extends State<ChatScreen> {
   }
 }
 
-class Unisons extends StatefulWidget {
-  const Unisons({super.key});
+class UnisonsScreen extends StatefulWidget {
+  const UnisonsScreen({super.key});
 
   @override
-  State<Unisons> createState() => _Unisons();
+  State<UnisonsScreen> createState() => _UnisonsScreenState();
 }
 
-class _Unisons extends State<Unisons> {
+class _UnisonsScreenState extends State<UnisonsScreen> {
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(width: 250, child: UnisonsSidebar()),
+        SizedBox(width: 250, child: UnisonGroupSidebar()),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: ChatScreen(),
+            child: UnisonChatInputScreen(),
           ),
         ),
       ],
@@ -364,18 +373,18 @@ class CreateNewUnisonDialog extends StatefulWidget {
   const CreateNewUnisonDialog({super.key});
 
   @override
-  State<CreateNewUnisonDialog> createState() => _CreateNewUnisonDialog();
+  State<CreateNewUnisonDialog> createState() => _CreateNewUnisonDialogState();
 }
 
-class _CreateNewUnisonDialog extends State<CreateNewUnisonDialog> {
-  final _formKey = GlobalKey<FormState>();
+class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
+  final _createUnisonFormKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Create new Unison"),
       content: Form(
-        key: _formKey,
+        key: _createUnisonFormKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -385,8 +394,8 @@ class _CreateNewUnisonDialog extends State<CreateNewUnisonDialog> {
                 labelText: "Name",
                 hintText: "Name",
               ),
-              validator: (value) {
-                if (value == null || value.length < 4) {
+              validator: (enteredName) {
+                if (enteredName == null || enteredName.length < 4) {
                   return "Name must be at least 4 characters";
                 }
                 return null;
@@ -404,7 +413,7 @@ class _CreateNewUnisonDialog extends State<CreateNewUnisonDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            if (_formKey.currentState!.validate()) {
+            if (_createUnisonFormKey.currentState!.validate()) {
               // Create
             }
           },
@@ -415,46 +424,46 @@ class _CreateNewUnisonDialog extends State<CreateNewUnisonDialog> {
   }
 }
 
-class UnisonConversation extends StatefulWidget {
-  final RealtimeChannel roomChannel;
-  const UnisonConversation({super.key, required this.roomChannel});
+class UnisonMessageFeed extends StatefulWidget {
+  final RealtimeChannel realtimeRoomChannel;
+  const UnisonMessageFeed({super.key, required this.realtimeRoomChannel});
 
   @override
-  State<UnisonConversation> createState() => _UnisonConversation();
+  State<UnisonMessageFeed> createState() => _UnisonMessageFeedState();
 }
 
-class _UnisonConversation extends State<UnisonConversation> {
-  final ScrollController _chatScrollController = ScrollController();
-  List<Message> messages = [];
-  double _currentOffset = 0;
-  bool _loadingMessages = false;
+class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
+  final ScrollController _messageFeedScrollController = ScrollController();
+  List<Message> _loadedMessages = [];
+  double _messageFeedScrollOffset = 0;
+  bool _isFetchingMessages = false;
 
-  Future<List<Message>> fetchMessages() async {
-    final messages = await Supabase.instance.client
+  Future<List<Message>> fetchMessagesFromDatabase() async {
+    final fetchedMessages = await Supabase.instance.client
         .from("messages")
         .select("content, created_at")
         .order("created_at", ascending: true);
 
-    return Message.fromList(messages);
+    return Message.fromList(fetchedMessages);
   }
 
   @override
   void initState() {
     super.initState();
 
-    _chatScrollController.addListener(() {
+    _messageFeedScrollController.addListener(() {
       setState(() {
-        _currentOffset = _chatScrollController.offset;
+        _messageFeedScrollOffset = _messageFeedScrollController.offset;
       });
     });
 
-    widget.roomChannel
+    widget.realtimeRoomChannel
         .onBroadcast(
           event: "message_sent",
-          callback: (payload) {
+          callback: (broadcastPayload) {
             setState(() {
-              messages.add(Message.fromMap(payload));
-              _scrollToBottom();
+              _loadedMessages.add(Message.fromMap(broadcastPayload));
+              _scrollFeedToLatestMessage();
             });
           },
         )
@@ -463,34 +472,36 @@ class _UnisonConversation extends State<UnisonConversation> {
 
   @override
   void dispose() {
-    widget.roomChannel.unsubscribe();
+    widget.realtimeRoomChannel.unsubscribe();
     super.dispose();
   }
 
-  void loadMessages() async {
-    var messenger = ScaffoldMessenger.of(context);
+  void fetchAndDisplayMessages() async {
+    var scaffoldMessenger = ScaffoldMessenger.of(context);
 
     setState(() {
-      _loadingMessages = true;
+      _isFetchingMessages = true;
     });
 
     try {
-      var newMessages = await fetchMessages();
+      var fetchedMessages = await fetchMessagesFromDatabase();
 
       setState(() {
-        messages = newMessages;
+        _loadedMessages = fetchedMessages;
       });
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    } catch (fetchError) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(fetchError.toString())),
+      );
     }
 
     setState(() {
-      _loadingMessages = false;
+      _isFetchingMessages = false;
     });
   }
 
-  void _scrollToBottom() {
-    _chatScrollController.animateTo(
+  void _scrollFeedToLatestMessage() {
+    _messageFeedScrollController.animateTo(
       0.0,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
@@ -501,29 +512,32 @@ class _UnisonConversation extends State<UnisonConversation> {
   Widget build(BuildContext context) {
     return Expanded(
       child: Stack(
-        alignment: .center,
+        alignment: Alignment.center,
         children: [
           ListView.builder(
-            controller: _chatScrollController,
-            itemCount: messages.length + 1,
+            controller: _messageFeedScrollController,
+            itemCount: _loadedMessages.length + 1,
             reverse: true,
             padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
-            itemBuilder: (context, index) {
-              if (index == messages.length) {
+            itemBuilder: (feedContext, reversedMessageIndex) {
+              if (reversedMessageIndex == _loadedMessages.length) {
                 return Center(
-                  child: _loadingMessages
+                  child: _isFetchingMessages
                       ? CircularProgressIndicator()
                       : TextButton(
                           onPressed: () {
-                            loadMessages();
+                            fetchAndDisplayMessages();
                           },
                           child: const Text("Load more messages"),
                         ),
                 );
               }
 
-              bool isOther = index % 2 == 0;
-              var message = messages[messages.length - index - 1];
+              bool isMessageFromOtherUser = reversedMessageIndex % 2 == 0;
+              var displayedMessage =
+                  _loadedMessages[_loadedMessages.length -
+                      reversedMessageIndex -
+                      1];
 
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -532,7 +546,9 @@ class _UnisonConversation extends State<UnisonConversation> {
                   children: [
                     // Avatar
                     CircleAvatar(
-                      backgroundColor: isOther ? Colors.orange : Colors.indigo,
+                      backgroundColor: isMessageFromOtherUser
+                          ? Colors.orange
+                          : Colors.indigo,
                       child: const Icon(Icons.person, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
@@ -545,7 +561,7 @@ class _UnisonConversation extends State<UnisonConversation> {
                           Row(
                             children: [
                               Text(
-                                isOther ? "User A" : "User B",
+                                isMessageFromOtherUser ? "User A" : "User B",
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -555,11 +571,11 @@ class _UnisonConversation extends State<UnisonConversation> {
                               Text(
                                 DateFormat(
                                   "M/d/yy, h:mm a",
-                                ).format(message.createdAt),
+                                ).format(displayedMessage.createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Theme.of(
-                                    context,
+                                    feedContext,
                                   ).textTheme.bodySmall?.color?.withValues(),
                                 ),
                               ),
@@ -568,7 +584,7 @@ class _UnisonConversation extends State<UnisonConversation> {
                           const SizedBox(height: 2),
                           // Message Body
                           Text(
-                            message.content,
+                            displayedMessage.content,
                             style: const TextStyle(fontSize: 15),
                           ),
                         ],
@@ -579,12 +595,11 @@ class _UnisonConversation extends State<UnisonConversation> {
               );
             },
           ),
-          if (_currentOffset > 0)
+          if (_messageFeedScrollOffset > 0)
             Positioned(
               bottom: 16,
               child: IconButton.filled(
-                onPressed: _scrollToBottom,
-                // icon: Text(_currentOffset.toString()),
+                onPressed: _scrollFeedToLatestMessage,
                 icon: Icon(Icons.arrow_downward),
               ),
             ),
@@ -594,54 +609,59 @@ class _UnisonConversation extends State<UnisonConversation> {
   }
 }
 
-class Home extends StatefulWidget {
-  const Home({super.key});
+class HomeFeedScreen extends StatefulWidget {
+  const HomeFeedScreen({super.key});
 
   @override
-  State<Home> createState() => _Home();
+  State<HomeFeedScreen> createState() => _HomeFeedScreenState();
 }
 
-class _Home extends State<Home> {
-  final _pageController = PageController(initialPage: 0);
-  final List<PicsumImage> _images = [];
+class _HomeFeedScreenState extends State<HomeFeedScreen> {
+  final _verticalPostPageController = PageController(initialPage: 0);
+  final List<PicsumImage> _fetchedPostImages = [];
 
-  int _currentPage = 0;
-  int _currentPicsumPage = 0;
-  bool _isLoading = false;
+  int _visiblePostPageIndex = 0;
+  int _nextPicsumApiPage = 0;
+  bool _isFetchingPostImages = false;
 
-  static const Curve _pageAnimation = Curves.easeOutCubic;
+  static const Curve _postPageScrollAnimation = Curves.easeOutCubic;
 
   // Debug
-  bool _isLoggedIn = true;
+  bool _isCurrentUserLoggedIn = true;
 
-  Future<List<PicsumImage>> fetchImages(int page, {int? limit = 4}) async {
-    final response = await http.get(
-      Uri.parse("https://picsum.photos/v2/list?page=$page&limit=$limit"),
+  Future<List<PicsumImage>> fetchPicsumImages(
+    int picsumPage, {
+    int? limit = 4,
+  }) async {
+    final httpResponse = await http.get(
+      Uri.parse("https://picsum.photos/v2/list?page=$picsumPage&limit=$limit"),
     );
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => PicsumImage.fromJson(item)).toList();
+    if (httpResponse.statusCode == 200) {
+      List<dynamic> decodedImageData = jsonDecode(httpResponse.body);
+      return decodedImageData
+          .map((imageJson) => PicsumImage.fromJson(imageJson))
+          .toList();
     } else {
       throw Exception("Failed to load images");
     }
   }
 
-  Future<void> _fetchNextPage() async {
-    if (_isLoading) return;
+  Future<void> _fetchNextBatchOfPostImages() async {
+    if (_isFetchingPostImages) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _isFetchingPostImages = true);
 
     try {
-      var newImages = await fetchImages(_currentPicsumPage);
+      var newlyFetchedImages = await fetchPicsumImages(_nextPicsumApiPage);
 
       setState(() {
-        _images.addAll(newImages);
-        _currentPicsumPage++;
-        _isLoading = false;
+        _fetchedPostImages.addAll(newlyFetchedImages);
+        _nextPicsumApiPage++;
+        _isFetchingPostImages = false;
       });
-    } catch (e) {
-      setState(() => _isLoading = false);
+    } catch (fetchError) {
+      setState(() => _isFetchingPostImages = false);
     }
   }
 
@@ -649,10 +669,10 @@ class _Home extends State<Home> {
   void initState() {
     super.initState();
 
-    _fetchNextPage();
-    _pageController.addListener(() {
-      if (_currentPage > _images.length - 2) {
-        _fetchNextPage();
+    _fetchNextBatchOfPostImages();
+    _verticalPostPageController.addListener(() {
+      if (_visiblePostPageIndex > _fetchedPostImages.length - 2) {
+        _fetchNextBatchOfPostImages();
       }
     });
   }
@@ -660,26 +680,32 @@ class _Home extends State<Home> {
   @override
   void dispose() {
     super.dispose();
-    _pageController.dispose();
+    _verticalPostPageController.dispose();
   }
 
-  void nextPage() {
-    int targetPage = (_currentPage + 1).clamp(0, _images.length - 1);
-    _currentPage = targetPage;
-    _pageController.animateToPage(
-      targetPage,
+  void navigateToNextPost() {
+    int targetPostIndex = (_visiblePostPageIndex + 1).clamp(
+      0,
+      _fetchedPostImages.length - 1,
+    );
+    _visiblePostPageIndex = targetPostIndex;
+    _verticalPostPageController.animateToPage(
+      targetPostIndex,
       duration: const Duration(milliseconds: 300),
-      curve: _pageAnimation,
+      curve: _postPageScrollAnimation,
     );
   }
 
-  void previousPage() {
-    int targetPage = (_currentPage - 1).clamp(0, _images.length - 1);
-    _currentPage = targetPage;
-    _pageController.animateToPage(
-      targetPage,
+  void navigateToPreviousPost() {
+    int targetPostIndex = (_visiblePostPageIndex - 1).clamp(
+      0,
+      _fetchedPostImages.length - 1,
+    );
+    _visiblePostPageIndex = targetPostIndex;
+    _verticalPostPageController.animateToPage(
+      targetPostIndex,
       duration: const Duration(milliseconds: 300),
-      curve: _pageAnimation,
+      curve: _postPageScrollAnimation,
     );
   }
 
@@ -688,27 +714,27 @@ class _Home extends State<Home> {
     return Stack(
       alignment: Alignment.center,
       children: [
-        _images.isEmpty
-            ? const CenteredCircularProgress()
+        _fetchedPostImages.isEmpty
+            ? const FullScreenLoadingIndicator()
             : PageView.builder(
-                controller: _pageController,
+                controller: _verticalPostPageController,
                 scrollDirection: Axis.vertical,
-                itemCount: _images.length,
-                onPageChanged: (page) {
+                itemCount: _fetchedPostImages.length,
+                onPageChanged: (newPageIndex) {
                   setState(() {
-                    _currentPage = page;
+                    _visiblePostPageIndex = newPageIndex;
                   });
                 },
-                itemBuilder: (context, index) {
-                  var image = _images[index];
-                  return PostPage(image: image);
+                itemBuilder: (feedContext, postIndex) {
+                  var currentPostImage = _fetchedPostImages[postIndex];
+                  return FullScreenPostPage(postImage: currentPostImage);
                 },
               ),
         if (kDebugMode)
           Positioned(
             top: 16,
             child: Text(
-              "Page $_currentPage",
+              "Page $_visiblePostPageIndex",
               style: TextStyle(color: Colors.white),
             ),
           ),
@@ -716,14 +742,14 @@ class _Home extends State<Home> {
           right: 16,
           child: Column(
             children: [
-              if (_currentPage > 0)
+              if (_visiblePostPageIndex > 0)
                 TextButton(
-                  onPressed: previousPage,
+                  onPressed: navigateToPreviousPost,
                   style: TextButton.styleFrom(shape: const CircleBorder()),
                   child: const Icon(Icons.keyboard_arrow_up),
                 ),
               TextButton(
-                onPressed: nextPage,
+                onPressed: navigateToNextPost,
                 style: TextButton.styleFrom(shape: const CircleBorder()),
                 child: const Icon(Icons.keyboard_arrow_down),
               ),
@@ -737,11 +763,11 @@ class _Home extends State<Home> {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                _isLoggedIn
-                    ? Pressable(
+                _isCurrentUserLoggedIn
+                    ? TappableWidget(
                         onPressed: () {
                           setState(() {
-                            _isLoggedIn = !_isLoggedIn;
+                            _isCurrentUserLoggedIn = !_isCurrentUserLoggedIn;
                           });
                         },
                         child: CircleAvatar(
@@ -754,7 +780,7 @@ class _Home extends State<Home> {
                     : IconButton(
                         onPressed: () {
                           setState(() {
-                            _isLoggedIn = !_isLoggedIn;
+                            _isCurrentUserLoggedIn = !_isCurrentUserLoggedIn;
                           });
                         },
                         style: IconButton.styleFrom(
@@ -784,72 +810,74 @@ class _Home extends State<Home> {
   }
 }
 
-class Pressable extends StatelessWidget {
+class TappableWidget extends StatelessWidget {
   final Widget child;
   final VoidCallback? onPressed;
-  final HitTestBehavior behavior;
-  final SystemMouseCursor cursor;
+  final HitTestBehavior hitTestBehavior;
+  final SystemMouseCursor mouseCursorStyle;
 
-  const Pressable({
+  const TappableWidget({
     super.key,
     required this.child,
     this.onPressed,
-    this.behavior = HitTestBehavior.opaque, // Makes empty space clickable
-    this.cursor = SystemMouseCursors.click, // Shows the "hand" icon
+    this.hitTestBehavior = HitTestBehavior.opaque,
+    this.mouseCursorStyle = SystemMouseCursors.click,
   });
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      cursor: cursor,
+      cursor: mouseCursorStyle,
       child: GestureDetector(
         onTap: onPressed,
-        behavior: behavior,
+        behavior: hitTestBehavior,
         child: child,
       ),
     );
   }
 }
 
-class CenteredCircularProgress extends StatelessWidget {
-  final double? progress;
+class FullScreenLoadingIndicator extends StatelessWidget {
+  final double? loadingProgress;
 
-  const CenteredCircularProgress({super.key, this.progress});
+  const FullScreenLoadingIndicator({super.key, this.loadingProgress});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black,
       alignment: Alignment.center,
-      child: CircularProgressIndicator(value: progress),
+      child: CircularProgressIndicator(value: loadingProgress),
     );
   }
 }
 
-class PostPage extends StatefulWidget {
-  final PicsumImage image;
+class FullScreenPostPage extends StatefulWidget {
+  final PicsumImage postImage;
 
-  const PostPage({super.key, required this.image});
+  const FullScreenPostPage({super.key, required this.postImage});
 
   @override
-  State<PostPage> createState() => _PostPage();
+  State<FullScreenPostPage> createState() => _FullScreenPostPageState();
 }
 
-class _PostPage extends State<PostPage> {
+class _FullScreenPostPageState extends State<FullScreenPostPage> {
   @override
   Widget build(BuildContext context) {
     return CachedNetworkImage(
       fadeInDuration: Duration.zero,
-      imageUrl: widget.image.downloadUrl,
+      imageUrl: widget.postImage.downloadUrl,
       fit: BoxFit.cover,
-      progressIndicatorBuilder: (context, url, progress) {
-        return CenteredCircularProgress(progress: progress.progress);
+      progressIndicatorBuilder: (imageContext, imageUrl, downloadProgress) {
+        return FullScreenLoadingIndicator(
+          loadingProgress: downloadProgress.progress,
+        );
       },
-      imageBuilder: (context, imageProvider) {
+      imageBuilder: (imageContext, resolvedImageProvider) {
         return Stack(
           children: [
             Positioned.fill(
-              child: Image(image: imageProvider, fit: BoxFit.cover),
+              child: Image(image: resolvedImageProvider, fit: BoxFit.cover),
             ),
             Positioned(
               bottom: 0,
@@ -857,7 +885,7 @@ class _PostPage extends State<PostPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  widget.image.author,
+                  widget.postImage.author,
                   style: TextStyle(
                     color: Colors.white,
                     shadows: [
