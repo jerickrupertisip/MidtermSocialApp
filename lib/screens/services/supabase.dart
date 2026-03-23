@@ -7,8 +7,6 @@ import "package:uniso_social_media_app/models/unison_group.dart";
 class SupabaseService {
   SupabaseService._();
 
-  static Profile? currentSignedInUser;
-
   static Future<void> initialize() async {
     try {
       await dotenv.load(fileName: "supabase/.env", isOptional: true);
@@ -41,7 +39,11 @@ class SupabaseService {
   }) async {
     return await Supabase.instance.client
         .from("messages")
-        .insert({"content": content, "union_id": groupId})
+        .insert({
+          "content": content,
+          "union_id": groupId,
+          "user_id": Supabase.instance.client.auth.currentUser?.id,
+        })
         .select()
         .single();
   }
@@ -92,10 +94,11 @@ class SupabaseService {
       data: {"username": username, "avatar_url": avatarUrl},
     );
 
-    var user = response.user;
-    if (user != null) {
-      currentSignedInUser = Profile.fromUser(user);
-    }
+    await Supabase.instance.client.from("profiles").insert({
+      "id": response.user?.id,
+      "username": username,
+      "avatar_url": avatarUrl,
+    });
   }
 
   static Future<bool> isUsernameExist(String username) async {
@@ -110,19 +113,13 @@ class SupabaseService {
     required String emailAddress,
     required String password,
   }) async {
-    var response = await Supabase.instance.client.auth.signInWithPassword(
+    await Supabase.instance.client.auth.signInWithPassword(
       email: emailAddress,
       password: password,
     );
-
-    var user = response.user;
-    if (user != null) {
-      currentSignedInUser = Profile.fromUser(user);
-    }
   }
 
   static Future<void> signOut() async {
     var _ = await Supabase.instance.client.auth.signOut();
-    currentSignedInUser = null;
   }
 }
