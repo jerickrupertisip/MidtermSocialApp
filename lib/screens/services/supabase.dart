@@ -98,9 +98,6 @@ class SupabaseService {
     }
   }
 
-  static bool get isSignedIn =>
-      Supabase.instance.client.auth.currentUser != null;
-
   static Future<bool> isUsernameExist(String username) async {
     var usernames = await Supabase.instance.client
         .from("profiles")

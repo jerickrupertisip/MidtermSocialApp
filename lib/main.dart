@@ -81,20 +81,31 @@ class _SocialMediaAppState extends State<SocialMediaApp> {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
-      home: Scaffold(
-        body: _buildPageView(),
-        bottomNavigationBar: SupabaseService.isSignedIn
-            ? _buildBottomNavBar()
-            : null,
+      home: StreamBuilder<AuthState>(
+        // Listening directly to Supabase auth changes
+        stream: Supabase.instance.client.auth.onAuthStateChange,
+        builder: (context, snapshot) {
+          // The session contains the current user data
+          final session = snapshot.data?.session;
+          final bool isLoggedIn = session != null;
+
+          return Scaffold(
+            body: _buildPageView(session?.user),
+            bottomNavigationBar: isLoggedIn ? _buildBottomNavBar() : null,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildPageView() {
+  Widget _buildPageView(User? user) {
     return PageView(
       controller: _bottomNavPageController,
       physics: const NeverScrollableScrollPhysics(),
-      children: const [HomeFeedScreen(), UnisonsScreen()],
+      children: [
+        HomeFeedScreen(user: user),
+        UnisonsScreen(),
+      ],
     );
   }
 
@@ -786,7 +797,8 @@ class _MessageBubble extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class HomeFeedScreen extends StatefulWidget {
-  const HomeFeedScreen({super.key});
+  final User? user;
+  const HomeFeedScreen({super.key, required this.user});
 
   @override
   State<HomeFeedScreen> createState() => _HomeFeedScreenState();
@@ -953,7 +965,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Widget _buildUserHeader() {
-    String? username = SupabaseService.currentSignedInUser?.username;
+    String? username;
+    User? user = widget.user;
+    if (user != null) {
+      username = Profile.fromUser(user).username;
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -967,10 +984,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Widget _buildUserAvatar() {
-    var username = SupabaseService.currentSignedInUser?.username;
-    var avatarUrl = SupabaseService.currentSignedInUser?.avatarUrl;
+    String? username;
+    String? avatarUrl;
+    User? user = widget.user;
+    if (user != null) {
+      var profile = Profile.fromUser(user);
+      username = profile.username;
+      avatarUrl = profile.avatarUrl;
+    }
+
     return TappableWidget(
-      onPressed: SupabaseService.isSignedIn ? _goToProfilePage : _goToLoginPage,
+      onPressed: user != null ? _goToProfilePage : _goToLoginPage,
       child: CircleAvatar(
         backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
         radius: _kAvatarRadius,
