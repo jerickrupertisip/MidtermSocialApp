@@ -1,9 +1,9 @@
--- create table profiles (
---   id uuid default gen_random_uuid() primary key,
---   username text unique not null,
---   avatar_url text,
---   created_at timestamp with time zone default now()
--- );
+create table profiles (
+ id uuid default gen_random_uuid() primary key,
+ username text unique not null,
+ avatar_url text,
+ created_at timestamp with time zone default now()
+);
 
 create table unions (
   id uuid default gen_random_uuid() primary key,
