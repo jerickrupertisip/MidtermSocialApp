@@ -1,9 +1,12 @@
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
-import "package:intl/intl.dart";
 import "package:image_picker/image_picker.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/password_field.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/username_field.dart";
+import "package:uniso_social_media_app/screens/services/supabase.dart";
+import "package:uniso_social_media_app/utils.dart";
 
 // ---------------------------------------------------------------------------
 // Widget
@@ -27,11 +30,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // Controllers
   final TextEditingController _usernameInputController =
       TextEditingController();
-  final TextEditingController _emailInputController = TextEditingController();
+  final TextEditingController _emailInputController = TextEditingController(
+    text: "example@email.com",
+  );
   final TextEditingController _birthdateInputController =
       TextEditingController();
-  final TextEditingController _passwordInputController =
-      TextEditingController();
+  final TextEditingController _passwordInputController = TextEditingController(
+    text: "password",
+  );
 
   // UI state
   bool _passwordObscured = true;
@@ -39,8 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _signUpRequestInProgress = false;
 
   // Avatar / profile picture state
-  static const String _placeholderAvatarUrl = "https://via.placeholder.com/150";
-  String? _selectedAvatarUrl = _placeholderAvatarUrl;
+  String? _selectedAvatarUrl;
   Uint8List? _uploadedImageBytes;
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -55,52 +60,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _birthdateInputController.dispose();
     _passwordInputController.dispose();
     super.dispose();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Business logic
-  // ---------------------------------------------------------------------------
-
-  Future<void> _submitSignUp() async {
-    if (!_signUpFormKey.currentState!.validate()) return;
-    if (!_termsAndConditionsAccepted) return;
-
-    setState(() => _signUpRequestInProgress = true);
-
-    try {
-      await Supabase.instance.client.auth.signUp(
-        email: _emailInputController.text.trim(),
-        password: _passwordInputController.text.trim(),
-        data: {
-          "username": _usernameInputController.text.trim(),
-          "birthdate": _birthdateInputController.text,
-          "avatar_url": _selectedAvatarUrl,
-        },
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Registration successful! Check your email for verification.",
-            ),
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } on AuthException catch (authError) {
-      _showErrorSnackBar(authError.message);
-    } catch (_) {
-      _showErrorSnackBar("Unexpected error occurred");
-    } finally {
-      if (mounted) setState(() => _signUpRequestInProgress = false);
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
   }
 
   void _navigateToSignIn() {
@@ -123,21 +82,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // Date picker
   // ---------------------------------------------------------------------------
 
-  Future<void> _openBirthdatePicker() async {
-    final DateTime? selectedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (selectedDate != null) {
-      setState(() {
-        _birthdateInputController.text = DateFormat(
-          "yyyy-MM-dd",
-        ).format(selectedDate);
-      });
-    }
-  }
+  // Future<void> _openBirthdatePicker() async {
+  //   final DateTime? selectedDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+  //     firstDate: DateTime(1900),
+  //     lastDate: DateTime.now(),
+  //   );
+  //   if (selectedDate != null) {
+  //     setState(() {
+  //       _birthdateInputController.text = DateFormat(
+  //         "yyyy-MM-dd",
+  //       ).format(selectedDate);
+  //     });
+  //   }
+  // }
 
   // ---------------------------------------------------------------------------
   // Avatar / image selection
@@ -237,6 +196,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  void _submitSignUp() {
+    setState(() => _signUpRequestInProgress = true);
+
+    try {
+      SupabaseService.signUp(
+        username: _usernameInputController.text,
+        avatarUrl: _selectedAvatarUrl,
+      );
+    } on AuthException catch (authError) {
+      debugLog(context, authError.message);
+      return;
+    } catch (e) {
+      debugLog(context, "Error: $e");
+      return;
+    }
+
+    setState(() => _signUpRequestInProgress = false);
+    Navigator.of(context).pop();
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
@@ -265,16 +244,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 16),
                     _FormSectionHeader(),
                     const SizedBox(height: 32),
-                    _UsernameField(controller: _usernameInputController),
+                    UsernameField(controller: _usernameInputController),
                     const SizedBox(height: 16),
-                    _EmailField(controller: _emailInputController),
-                    const SizedBox(height: 16),
-                    _BirthdateField(
-                      controller: _birthdateInputController,
-                      onTap: () => _openBirthdatePicker(),
-                    ),
-                    const SizedBox(height: 16),
-                    _PasswordField(
+                    // EmailField(controller: _emailInputController),
+                    // const SizedBox(height: 16),
+                    // BirthdateField(
+                    //   controller: _birthdateInputController,
+                    //   onTap: () => _openBirthdatePicker(),
+                    // ),
+                    // const SizedBox(height: 16),
+                    PasswordField(
                       controller: _passwordInputController,
                       isObscured: _passwordObscured,
                       onToggleVisibility: _togglePasswordVisibility,
@@ -335,9 +314,13 @@ class _ProfileAvatarPicker extends StatelessWidget {
   final String? selectedAvatarUrl;
   final VoidCallback onEditPressed;
 
-  ImageProvider? get _resolvedAvatarImage {
-    if (uploadedImageBytes != null) return MemoryImage(uploadedImageBytes!);
-    if (selectedAvatarUrl != null) return NetworkImage(selectedAvatarUrl!);
+  ImageProvider? _resolvedAvatarImage(BuildContext context) {
+    try {
+      if (uploadedImageBytes != null) return MemoryImage(uploadedImageBytes!);
+      if (selectedAvatarUrl != null) return NetworkImage(selectedAvatarUrl!);
+    } catch (e) {
+      debugLog(context, "Error: $e");
+    }
     return null;
   }
 
@@ -354,7 +337,7 @@ class _ProfileAvatarPicker extends StatelessWidget {
               CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.grey[800],
-                backgroundImage: _resolvedAvatarImage,
+                backgroundImage: _resolvedAvatarImage(context),
                 child: _hasNoAvatarSelected
                     ? const Icon(Icons.person, size: 60)
                     : null,
@@ -409,124 +392,7 @@ class _FormSectionHeader extends StatelessWidget {
   }
 }
 
-/// Username input field with presence validation.
-class _UsernameField extends StatelessWidget {
-  const _UsernameField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: "Username",
-        prefixIcon: Icon(Icons.person_outline),
-        border: OutlineInputBorder(),
-      ),
-      validator: (enteredUsername) {
-        if (enteredUsername == null || enteredUsername.isEmpty) {
-          return "Please enter your username";
-        }
-        return null;
-      },
-    );
-  }
-}
-
-/// Email address input field with format validation.
-class _EmailField extends StatelessWidget {
-  const _EmailField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.emailAddress,
-      decoration: const InputDecoration(
-        labelText: "Email Address",
-        prefixIcon: Icon(Icons.email_outlined),
-        border: OutlineInputBorder(),
-      ),
-      validator: (enteredEmail) {
-        if (enteredEmail == null ||
-            enteredEmail.isEmpty ||
-            !enteredEmail.contains("@")) {
-          return "Please enter a valid email address";
-        }
-        return null;
-      },
-    );
-  }
-}
-
-/// Read-only birthdate field that opens a date picker dialog on tap.
-class _BirthdateField extends StatelessWidget {
-  const _BirthdateField({required this.controller, required this.onTap});
-
-  final TextEditingController controller;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      readOnly: true,
-      onTap: onTap,
-      decoration: const InputDecoration(
-        labelText: "Birthdate",
-        prefixIcon: Icon(Icons.calendar_today),
-        border: OutlineInputBorder(),
-        hintText: "YYYY-MM-DD",
-      ),
-      validator: (selectedBirthdate) {
-        if (selectedBirthdate == null || selectedBirthdate.isEmpty) {
-          return "Please select your birthdate";
-        }
-        return null;
-      },
-    );
-  }
-}
-
 /// Password input field with a visibility toggle and minimum-length validation.
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
-    required this.controller,
-    required this.isObscured,
-    required this.onToggleVisibility,
-  });
-
-  final TextEditingController controller;
-  final bool isObscured;
-  final VoidCallback onToggleVisibility;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: isObscured,
-      decoration: InputDecoration(
-        labelText: "Password",
-        prefixIcon: const Icon(Icons.lock_outline),
-        suffixIcon: IconButton(
-          icon: Icon(isObscured ? Icons.visibility : Icons.visibility_off),
-          onPressed: onToggleVisibility,
-        ),
-        border: const OutlineInputBorder(),
-      ),
-      validator: (enteredPassword) {
-        if (enteredPassword == null || enteredPassword.length < 6) {
-          return "Password must be at least 6 characters";
-        }
-        return null;
-      },
-    );
-  }
-}
-
 /// Checkbox row for accepting the User Agreement and Privacy Policy.
 class _TermsAcceptanceRow extends StatelessWidget {
   const _TermsAcceptanceRow({

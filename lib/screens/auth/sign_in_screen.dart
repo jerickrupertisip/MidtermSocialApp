@@ -1,6 +1,9 @@
 import "package:flutter/material.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/screens/auth/sign_up_screen.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/password_field.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/username_field.dart";
+import "package:uniso_social_media_app/screens/services/supabase.dart";
 
 // ---------------------------------------------------------------------------
 // Widget
@@ -22,7 +25,8 @@ class _SignInScreenState extends State<SignInScreen> {
   final GlobalKey<FormState> _signInFormKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _emailInputController = TextEditingController();
+  final TextEditingController _usernameInputController =
+      TextEditingController();
   final TextEditingController _passwordInputController =
       TextEditingController();
 
@@ -37,7 +41,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   void dispose() {
-    _emailInputController.dispose();
+    _usernameInputController.dispose();
     _passwordInputController.dispose();
     super.dispose();
   }
@@ -52,16 +56,17 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _signInRequestInProgress = true);
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailInputController.text.trim(),
+      await SupabaseService.signIn(
+        username: _usernameInputController.text.trim(),
         password: _passwordInputController.text.trim(),
       );
     } on AuthException catch (authError) {
       _showErrorSnackBar(authError.message);
-    } catch (_) {
-      _showErrorSnackBar("Unexpected error occurred");
+    } catch (e) {
+      _showErrorSnackBar("Error: $e");
     } finally {
       if (mounted) {
+        Navigator.of(context).pop();
         setState(() => _signInRequestInProgress = false);
       }
     }
@@ -116,9 +121,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   children: [
                     _AppBranding(),
                     const SizedBox(height: 48),
-                    _EmailField(controller: _emailInputController),
+                    UsernameField(controller: _usernameInputController),
                     const SizedBox(height: 16),
-                    _PasswordField(
+                    PasswordField(
                       controller: _passwordInputController,
                       isObscured: _passwordObscured,
                       onToggleVisibility: _togglePasswordVisibility,
@@ -185,72 +190,6 @@ class _AppBranding extends StatelessWidget {
           style: TextStyle(color: Colors.grey),
         ),
       ],
-    );
-  }
-}
-
-/// Email address input field with built-in validation.
-class _EmailField extends StatelessWidget {
-  const _EmailField({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.emailAddress,
-      decoration: const InputDecoration(
-        labelText: "Email Address",
-        hintText: "Enter your email address",
-        prefixIcon: Icon(Icons.email),
-        border: OutlineInputBorder(),
-      ),
-      validator: (enteredEmail) {
-        if (enteredEmail == null ||
-            enteredEmail.isEmpty ||
-            !enteredEmail.contains("@")) {
-          return "Please enter a valid email address";
-        }
-        return null;
-      },
-    );
-  }
-}
-
-/// Password input field with a visibility toggle and built-in validation.
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
-    required this.controller,
-    required this.isObscured,
-    required this.onToggleVisibility,
-  });
-
-  final TextEditingController controller;
-  final bool isObscured;
-  final VoidCallback onToggleVisibility;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: isObscured,
-      decoration: InputDecoration(
-        labelText: "Password",
-        hintText: "Enter your password",
-        prefixIcon: const Icon(Icons.lock),
-        suffixIcon: IconButton(
-          icon: Icon(isObscured ? Icons.visibility : Icons.visibility_off),
-          onPressed: onToggleVisibility,
-        ),
-        border: const OutlineInputBorder(),
-      ),
-      validator: (enteredPassword) {
-        if (enteredPassword == null || enteredPassword.isEmpty) {
-          return "Please enter your password";
-        }
-        return null;
-      },
     );
   }
 }

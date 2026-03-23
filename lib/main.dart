@@ -10,9 +10,10 @@ import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:uniso_social_media_app/models/unison_group.dart";
 import "package:flutter_lorem/flutter_lorem.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:intl/intl.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
+import "package:uniso_social_media_app/screens/services/supabase.dart";
+import "package:uniso_social_media_app/utils.dart";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -25,7 +26,6 @@ const _kSidebarWidth = 250.0;
 const _kMemberPanelWidth = 200.0;
 const _kDropShadow = Shadow(offset: Offset(1.9, -0.4), blurRadius: 6);
 const _kAvatarRadius = 24.0;
-const _kIconSize = _kAvatarRadius * 2; // diameter
 const _kOverlayTextStyle = TextStyle(
   color: Colors.white,
   shadows: [_kDropShadow],
@@ -34,105 +34,6 @@ const _kOverlayTextStyle = TextStyle(
 // ---------------------------------------------------------------------------
 // SupabaseService — all Supabase-specific logic lives here
 // ---------------------------------------------------------------------------
-
-class SupabaseService {
-  SupabaseService._();
-
-  // ---------- Initialisation ----------
-
-  /// Loads environment variables and initialises the Supabase client.
-  /// Call this once from [main] before [runApp].
-  static Future<void> initialize() async {
-    try {
-      await dotenv.load(fileName: "supabase/.env", isOptional: true);
-    } finally {}
-
-    final supabaseApiUrl = dotenv.env["API_URL"];
-    final supabaseAnonKey = dotenv.env["ANON_KEY"];
-
-    if (supabaseApiUrl != null && supabaseAnonKey != null) {
-      await Supabase.initialize(url: supabaseApiUrl, anonKey: supabaseAnonKey);
-    }
-  }
-
-  // ---------- Unison groups ----------
-
-  /// Fetches all rows from the `unions` table and returns them as a typed
-  /// list of [UnisonGroup] models.
-  static Future<List<UnisonGroup>> fetchUnisonGroups() async {
-    final rows = await Supabase.instance.client.from("unions").select("*");
-    return UnisonGroup.fromList(rows);
-  }
-
-  // ---------- Realtime channels ----------
-
-  /// Creates (but does not subscribe to) a broadcast channel scoped to
-  /// [groupId]. Returns `null` when [groupId] is null so callers can handle
-  /// the "no group selected" state without extra null checks.
-  static RealtimeChannel? openMessageChannel(String? groupId) {
-    if (groupId == null) return null;
-    return Supabase.instance.client.channel(
-      "room:$groupId:messages",
-      opts: RealtimeChannelConfig(self: true),
-    );
-  }
-
-  // ---------- Messages ----------
-
-  /// Persists a new message to the `messages` table and returns the inserted
-  /// row so it can be immediately broadcast on the realtime channel.
-  static Future<Map<String, dynamic>> sendMessage({
-    required String content,
-    required String groupId,
-  }) async {
-    return await Supabase.instance.client
-        .from("messages")
-        .insert({"content": content, "union_id": groupId})
-        .select()
-        .single();
-  }
-
-  /// Broadcasts [messageData] over [channel] using the `message_sent` event.
-  static void broadcastMessage({
-    required RealtimeChannel channel,
-    required Map<String, dynamic> messageData,
-  }) {
-    channel.sendBroadcastMessage(event: "message_sent", payload: messageData);
-  }
-
-  /// Fetches a page of messages for [unisonId], ordered newest-first.
-  ///
-  /// [alreadyLoaded] is the current list length and is used to calculate the
-  /// query range so that already-fetched messages are not re-fetched.
-  static Future<List<Message>> fetchMessages({
-    required String unisonId,
-    required int alreadyLoaded,
-    int pageSize = 20,
-  }) async {
-    final rows = await Supabase.instance.client
-        .from("messages")
-        .select("content, created_at")
-        .eq("union_id", unisonId)
-        .limit(pageSize)
-        .order("created_at", ascending: false)
-        .range(alreadyLoaded, alreadyLoaded + pageSize);
-
-    return Message.fromList(rows).reversed.toList();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-void debugLog(BuildContext context, String message) {
-  if (!kDebugMode) return;
-
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.clearSnackBars();
-  messenger.showSnackBar(SnackBar(content: Text(message)));
-  debugPrint(message);
-}
 
 // ---------------------------------------------------------------------------
 // Initialisation
@@ -886,9 +787,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   int _nextPicsumApiPage = 0;
   bool _isFetchingPostImages = false;
 
-  // Debug
-  bool _isCurrentUserLoggedIn = true;
-
   @override
   void initState() {
     super.initState();
@@ -966,9 +864,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
     );
   }
 
-  void _goToProfilePage() {
-    setState(() => _isCurrentUserLoggedIn = !_isCurrentUserLoggedIn);
-  }
+  void _goToProfilePage() {}
 
   void _goToLoginPage() {
     debugPrint("To Login Page");
@@ -1037,37 +933,31 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Widget _buildUserHeader() {
+    String? username = SupabaseService.currentSignedInUser?.username;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
           _buildUserAvatar(),
           const SizedBox(width: 16),
-          const Text("Your name", style: _kOverlayTextStyle),
+          Text(username ?? "Sign In", style: _kOverlayTextStyle),
         ],
       ),
     );
   }
 
   Widget _buildUserAvatar() {
-    if (_isCurrentUserLoggedIn) {
-      return TappableWidget(
-        onPressed: _goToProfilePage,
-        child: const CircleAvatar(
-          backgroundImage: NetworkImage(
-            "https://avatars.githubusercontent.com/u/64018564?v=4",
-          ),
-          radius: _kAvatarRadius,
-        ),
-      );
-    }
-
-    return IconButton(
-      padding: EdgeInsetsGeometry.zero,
-      iconSize: _kIconSize,
-      onPressed: _goToLoginPage,
-      style: IconButton.styleFrom(shape: const CircleBorder()),
-      icon: const Icon(Icons.person, color: Colors.white),
+    var username = SupabaseService.currentSignedInUser?.username;
+    var avatarUrl = SupabaseService.currentSignedInUser?.avatarUrl;
+    return TappableWidget(
+      onPressed: SupabaseService.isSignedIn ? _goToProfilePage : _goToLoginPage,
+      child: CircleAvatar(
+        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+        radius: _kAvatarRadius,
+        child: username != null
+            ? Text(getInitials(username))
+            : Icon(Icons.person, color: Colors.white),
+      ),
     );
   }
 }
