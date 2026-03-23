@@ -91,7 +91,7 @@ const main = async () => {
       },
       raw_user_meta_data: {
         email_verified: true,
-        username: copycat.fullName(ctx.seed),
+        username: copycat.username(ctx.seed),
       },
       is_super_admin: null,
       // email_change_token_new: "",
@@ -112,8 +112,9 @@ const main = async () => {
   );
 
   const { profiles } = await seed.profiles((x) =>
-    x(count.users, ({ seed: s }) => ({
-      username: copycat.username(s),
+    x(count.users, ({ index }) => ({
+      id: users[index].id,
+      username: (users[index].raw_user_meta_data as { username: string }).username,
     }))
   );
 

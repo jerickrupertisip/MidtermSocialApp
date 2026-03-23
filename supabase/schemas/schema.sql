@@ -1,5 +1,5 @@
 create table profiles (
- id uuid default gen_random_uuid() primary key,
+ id uuid references auth.users(id) on delete cascade,
  username text unique not null,
  avatar_url text,
  created_at timestamp with time zone default now()
