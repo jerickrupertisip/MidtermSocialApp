@@ -14,54 +14,31 @@ function getRandomInt(min: number, max: number) {
 }
 
 const count = {
-  users: 100,
+  users: 60,
   unions: 6,
-  messages: 400,
+  messages: 600,
 }
-
-// const full = async (seed: SeedClient) => {
-//   const { profiles } = await seed.profiles((x) => x(count.users, {
-//     username: (x) => copycat.username(x.seed)
-//   }));
-
-//   const { unions } = await seed.unions((x) =>
-//     x(count.unions, ({ index }) => ({
-//       name: (x) => copycat.streetName(x.seed),
-//       creator_id: profiles[index % profiles.length].id,
-//     }))
-//   );
-
-//   await seed.union_members((x) =>
-//     x(20, ({ index }) => ({
-//       union_id: unions[index % unions.length].id,
-//       user_id: profiles[index % profiles.length].id,
-//     }))
-//   );
-
-//   await seed.public_messages((x) =>
-//     x(count.messages, ({ index }) => ({
-//       union_id: unions[index % unions.length].id,
-//       user_id: profiles[index % profiles.length].id,
-//       content: (x) => copycat.sentence(x.seed, { min: 4, max: getRandomInt(6, 20) }),
-//     }))
-//   );
-// }
-
 
 const main = async () => {
   const seed = await createSeedClient({ dryRun: true });
 
   await seed.$resetDatabase();
 
-  const startDate = new Date(2025, 0, 1, 0, 0);
-  let incrementedMinutes = 0;
+  const { profiles } = await seed.profiles((x) => x(count.users, {
+    username: (x) => copycat.username(x.seed)
+  }));
+
 
   const { unions } = await seed.unions((x) =>
-    x(count.unions, ({ index }) => ({
+    x(count.unions, () => ({
       name: (x) => copycat.streetName(x.seed),
     }))
   );
 
+  await seed.union_members((x) => x(20), { connect: { profiles, unions } });
+
+  const startDate = new Date(2025, 0, 1, 0, 0);
+  let incrementedMinutes = 0;
   await seed.public_messages((ctx) => ctx(count.messages, {
     // Incrementing content number
     content: () => {
@@ -73,7 +50,7 @@ const main = async () => {
       incrementedMinutes++; // Move to the next minute for the next row
       return nextDate.toISOString();
     },
-  }), { connect: { unions } })
+  }), { connect: { unions, profiles } })
 
   process.exit();
 };

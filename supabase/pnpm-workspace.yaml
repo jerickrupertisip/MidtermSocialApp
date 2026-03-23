@@ -1,0 +1,3 @@
+allowBuilds:
+  '@prisma/engines': true
+  '@snaplet/seed': true
