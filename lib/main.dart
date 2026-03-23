@@ -683,7 +683,7 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
       onRefresh: _loadedMessages.isEmpty ? _fetchMoreMessages : null,
       child: ListView.builder(
         controller: _messageFeedScrollController,
-        itemCount: _loadedMessages.length + 1,
+        itemCount: _loadedMessages.length,
         reverse: true,
         padding: const EdgeInsets.fromLTRB(0, 8, 16, 8),
         itemBuilder: _buildMessageListItem,
@@ -695,10 +695,6 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
     BuildContext feedContext,
     int reversedMessageIndex,
   ) {
-    if (reversedMessageIndex == _loadedMessages.length) {
-      return _buildLoadMoreFooter();
-    }
-
     final isMessageFromOtherUser = reversedMessageIndex % 2 == 0;
     final displayedMessage =
         _loadedMessages[_loadedMessages.length - reversedMessageIndex - 1];
@@ -706,17 +702,6 @@ class _UnisonMessageFeedState extends State<UnisonMessageFeed> {
     return _MessageBubble(
       message: displayedMessage,
       isFromOtherUser: isMessageFromOtherUser,
-    );
-  }
-
-  Widget _buildLoadMoreFooter() {
-    return Center(
-      child: _isFetchingMessages
-          ? const CircularProgressIndicator()
-          : TextButton(
-              onPressed: _fetchMoreMessages,
-              child: const Text("Load more messages"),
-            ),
     );
   }
 
