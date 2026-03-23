@@ -34,13 +34,28 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+  # http: Used for making HTTP requests to fetch image lists from Picsum API.
   http: ^1.6.0
+
+  # cached_network_image: Displays images from the internet and keeps them in a local cache for better performance.
   cached_network_image: ^3.4.1
+
+  # flutter_lorem: Generates placeholder text (Lorem Ipsum) for UI testing and mock data.
   flutter_lorem: ^2.0.0
+
+  # supabase_flutter: Official Flutter SDK for Supabase, used for backend services like Auth and Database.
   supabase_flutter: ^2.12.0
+
+  # flutter_dotenv: Loads configuration variables (like API keys) from a .env file to keep them secure.
   flutter_dotenv: ^6.0.0
+
+  # intl: Provides internationalization and localization facilities, including date and number formatting.
   intl: ^0.20.2
   easy_refresh: ^3.4.0
+
+  # image_picker: Allows users to select images from their device's gallery or take new photos with the camera.
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +81,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    # Includes the .env file in the assets so it can be read at runtime by flutter_dotenv.
     - supabase/.env
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
