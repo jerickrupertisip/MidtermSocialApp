@@ -33,11 +33,11 @@ class SupabaseService {
     );
   }
 
-  static Future<Map<String, dynamic>> sendMessage({
+  static Future<Message> sendMessage({
     required String content,
     required String groupId,
   }) async {
-    return await Supabase.instance.client
+    var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
           "content": content,
@@ -46,6 +46,10 @@ class SupabaseService {
         })
         .select()
         .single();
+    var user = Supabase.instance.client.auth.currentUser!;
+    var profile = Profile.fromUser(user);
+
+    return Message.fromMapWithProfile(newMessage, profile);
   }
 
   static void broadcastMessage({

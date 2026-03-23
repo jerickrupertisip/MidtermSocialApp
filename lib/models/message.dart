@@ -23,7 +23,28 @@ class Message {
     );
   }
 
+  factory Message.fromMapWithProfile(
+    Map<String, dynamic> message,
+    Profile profile,
+  ) {
+    return Message(
+      content: message["content"],
+      createdAt: DateTime.parse(message["created_at"]),
+      sentBy: profile,
+    );
+  }
+
   static List<Message> fromList(List<Map<String, dynamic>> messages) {
     return messages.map((element) => Message.fromMap(element)).toList();
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      "content": content,
+      "created_at": createdAt.toIso8601String(),
+      "user_id": sentBy.id,
+      "username": sentBy.username,
+      "avatar_url": sentBy.avatarUrl,
+    };
   }
 }

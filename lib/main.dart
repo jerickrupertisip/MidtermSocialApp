@@ -435,7 +435,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       );
       SupabaseService.broadcastMessage(
         channel: channel,
-        messageData: insertedMessageData,
+        messageData: insertedMessageData.toMap(),
       );
     } catch (sendError) {
       if (mounted) {
