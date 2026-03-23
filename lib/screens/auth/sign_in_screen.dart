@@ -1,8 +1,8 @@
 import "package:flutter/material.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/screens/auth/sign_up_screen.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/email_field.dart";
 import "package:uniso_social_media_app/screens/components/form_fields/password_field.dart";
-import "package:uniso_social_media_app/screens/components/form_fields/username_field.dart";
 import "package:uniso_social_media_app/screens/services/supabase.dart";
 
 // ---------------------------------------------------------------------------
@@ -25,8 +25,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final GlobalKey<FormState> _signInFormKey = GlobalKey<FormState>();
 
   // Controllers
-  final TextEditingController _usernameInputController =
-      TextEditingController();
+  final TextEditingController _emailInputController = TextEditingController();
   final TextEditingController _passwordInputController =
       TextEditingController();
 
@@ -41,7 +40,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   void dispose() {
-    _usernameInputController.dispose();
+    _emailInputController.dispose();
     _passwordInputController.dispose();
     super.dispose();
   }
@@ -57,18 +56,18 @@ class _SignInScreenState extends State<SignInScreen> {
 
     try {
       await SupabaseService.signIn(
-        username: _usernameInputController.text.trim(),
+        emailAddress: _emailInputController.text.trim(),
         password: _passwordInputController.text.trim(),
       );
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } on AuthException catch (authError) {
       _showErrorSnackBar(authError.message);
     } catch (e) {
       _showErrorSnackBar("Error: $e");
     } finally {
-      if (mounted) {
-        Navigator.of(context).pop();
-        setState(() => _signInRequestInProgress = false);
-      }
+      setState(() => _signInRequestInProgress = false);
     }
   }
 
@@ -121,7 +120,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   children: [
                     _AppBranding(),
                     const SizedBox(height: 48),
-                    UsernameField(controller: _usernameInputController),
+                    EmailField(controller: _emailInputController),
                     const SizedBox(height: 16),
                     PasswordField(
                       controller: _passwordInputController,

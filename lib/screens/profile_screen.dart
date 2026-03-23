@@ -1,6 +1,9 @@
 import "package:flutter/material.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
-import "package:intl/intl.dart";
+
+// ---------------------------------------------------------------------------
+// Widget
+// ---------------------------------------------------------------------------
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,66 +13,97 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _supabase = Supabase.instance.client;
-  final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  // ── Supabase client ────────────────────────────────────────────────────────
+  final SupabaseClient _supabaseClient = Supabase.instance.client;
 
-  String _username = "";
-  String? _avatarUrl;
-  String _birthdate = "";
-  int _age = 0;
-  bool _isLoading = false;
+  // ── Form controllers ───────────────────────────────────────────────────────
+  final TextEditingController _usernameInputController =
+      TextEditingController();
+  final TextEditingController _emailInputController = TextEditingController();
+  final TextEditingController _newPasswordInputController =
+      TextEditingController();
+
+  // ── Displayed profile state ────────────────────────────────────────────────
+  String _displayedUsername = "";
+  String? _profileAvatarUrl;
+  String _rawBirthdate = "";
+  int _computedAge = 0;
+
+  bool _isSavingProfile = false;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _fetchAndPopulateUserData();
   }
 
-  void _loadUserData() {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      final metadata = user.userMetadata ?? {};
-      setState(() {
-        _username = metadata["username"] ?? "Unknown";
-        _avatarUrl = metadata["avatar_url"];
-        _birthdate = metadata["birthdate"] ?? "";
-        _usernameController.text = _username;
-        _emailController.text = user.email ?? "";
-        _age = _calculateAge(_birthdate);
-      });
-    }
+  @override
+  void dispose() {
+    _usernameInputController.dispose();
+    _emailInputController.dispose();
+    _newPasswordInputController.dispose();
+    super.dispose();
   }
 
-  int _calculateAge(String birthdateStr) {
-    if (birthdateStr.isEmpty) return 0;
+  // ── Data loading ───────────────────────────────────────────────────────────
+
+  void _fetchAndPopulateUserData() {
+    final User? currentUser = _supabaseClient.auth.currentUser;
+    if (currentUser == null) return;
+
+    final Map<String, dynamic> userMetadata = currentUser.userMetadata ?? {};
+
+    setState(() {
+      _displayedUsername = userMetadata["username"] ?? "Unknown";
+      _profileAvatarUrl = userMetadata["avatar_url"];
+      _rawBirthdate = userMetadata["birthdate"] ?? "";
+      _computedAge = _calculateAgeFromBirthdate(_rawBirthdate);
+
+      _usernameInputController.text = _displayedUsername;
+      _emailInputController.text = currentUser.email ?? "";
+    });
+  }
+
+  // ── Business logic ─────────────────────────────────────────────────────────
+
+  int _calculateAgeFromBirthdate(String birthdateString) {
+    if (birthdateString.isEmpty) return 0;
+
     try {
-      final birthdate = DateTime.parse(birthdateStr);
-      final today = DateTime.now();
+      final DateTime birthdate = DateTime.parse(birthdateString);
+      final DateTime today = DateTime.now();
       int age = today.year - birthdate.year;
-      if (today.month < birthdate.month || (today.month == birthdate.month && today.day < birthdate.day)) {
-        age--;
-      }
+
+      final bool birthdayNotYetOccurredThisYear =
+          today.month < birthdate.month ||
+          (today.month == birthdate.month && today.day < birthdate.day);
+
+      if (birthdayNotYetOccurredThisYear) age--;
       return age;
-    } catch (e) {
+    } catch (_) {
       return 0;
     }
   }
 
-  Future<void> _updateProfile() async {
-    setState(() => _isLoading = true);
-    try {
-      final newUsername = _usernameController.text.trim();
-      final newEmail = _emailController.text.trim();
-      final newPassword = _passwordController.text.trim();
+  Future<void> _saveProfileChanges() async {
+    setState(() => _isSavingProfile = true);
 
-      // Update metadata (username)
-      await _supabase.auth.updateUser(
+    try {
+      final String trimmedUsername = _usernameInputController.text.trim();
+      final String trimmedEmail = _emailInputController.text.trim();
+      final String trimmedNewPassword = _newPasswordInputController.text.trim();
+
+      final String? currentUserEmail = _supabaseClient.auth.currentUser?.email;
+      final bool emailHasChanged =
+          trimmedEmail.isNotEmpty && trimmedEmail != currentUserEmail;
+
+      await _supabaseClient.auth.updateUser(
         UserAttributes(
-          data: {"username": newUsername},
-          email: newEmail.isNotEmpty && newEmail != _supabase.auth.currentUser?.email ? newEmail : null,
-          password: newPassword.isNotEmpty ? newPassword : null,
+          data: {"username": trimmedUsername},
+          email: emailHasChanged ? trimmedEmail : null,
+          password: trimmedNewPassword.isNotEmpty ? trimmedNewPassword : null,
         ),
       );
 
@@ -77,25 +111,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Profile updated successfully")),
         );
-        _loadUserData();
+        _fetchAndPopulateUserData();
       }
-    } on AuthException catch (e) {
+    } on AuthException catch (authError) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(authError.message),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSavingProfile = false);
     }
   }
 
-  Future<void> _signOut() async {
-    await _supabase.auth.signOut();
+  Future<void> _signOutCurrentUser() async {
+    await _supabaseClient.auth.signOut();
     if (mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -110,63 +149,159 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // Top row: Username and Profile Pic
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _username,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
-                    child: _avatarUrl == null ? const Text("pfp") : null,
-                  ),
-                ],
+              _ProfileHeaderRow(
+                displayedUsername: _displayedUsername,
+                profileAvatarUrl: _profileAvatarUrl,
               ),
               const Spacer(),
-              // Middle section: Edit fields
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(labelText: "Change Username"),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email Address"),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "New Password"),
+              _ProfileEditFields(
+                usernameController: _usernameInputController,
+                emailController: _emailInputController,
+                newPasswordController: _newPasswordInputController,
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _updateProfile,
-                child: _isLoading ? const CircularProgressIndicator() : const Text("Save Changes"),
+              _SaveChangesButton(
+                isSaving: _isSavingProfile,
+                onPressed: _saveProfileChanges,
               ),
               const Spacer(),
-              // Bottom row: Age and Sign Out
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Age: $_age",
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  ElevatedButton(
-                    onPressed: _signOut,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text("Sign Out", style: TextStyle(color: Colors.white)),
-                  ),
-                ],
+              _ProfileFooterRow(
+                computedAge: _computedAge,
+                onSignOut: _signOutCurrentUser,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Private sub-widgets
+// ---------------------------------------------------------------------------
+
+class _ProfileHeaderRow extends StatelessWidget {
+  const _ProfileHeaderRow({
+    required this.displayedUsername,
+    required this.profileAvatarUrl,
+  });
+
+  final String displayedUsername;
+  final String? profileAvatarUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          displayedUsername,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        _UserAvatarCircle(avatarUrl: profileAvatarUrl),
+      ],
+    );
+  }
+}
+
+class _UserAvatarCircle extends StatelessWidget {
+  const _UserAvatarCircle({required this.avatarUrl});
+
+  final String? avatarUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: 30,
+      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+      child: avatarUrl == null ? const Text("pfp") : null,
+    );
+  }
+}
+
+class _ProfileEditFields extends StatelessWidget {
+  const _ProfileEditFields({
+    required this.usernameController,
+    required this.emailController,
+    required this.newPasswordController,
+  });
+
+  final TextEditingController usernameController;
+  final TextEditingController emailController;
+  final TextEditingController newPasswordController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: usernameController,
+          decoration: const InputDecoration(labelText: "Change Username"),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: emailController,
+          decoration: const InputDecoration(labelText: "Email Address"),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: newPasswordController,
+          obscureText: true,
+          decoration: const InputDecoration(labelText: "New Password"),
+        ),
+      ],
+    );
+  }
+}
+
+class _SaveChangesButton extends StatelessWidget {
+  const _SaveChangesButton({required this.isSaving, required this.onPressed});
+
+  final bool isSaving;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isSaving ? null : onPressed,
+      child: isSaving
+          ? const CircularProgressIndicator()
+          : const Text("Save Changes"),
+    );
+  }
+}
+
+class _ProfileFooterRow extends StatelessWidget {
+  const _ProfileFooterRow({required this.computedAge, required this.onSignOut});
+
+  final int computedAge;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text("Age: $computedAge", style: const TextStyle(fontSize: 18)),
+        _SignOutButton(onPressed: onSignOut),
+      ],
+    );
+  }
+}
+
+class _SignOutButton extends StatelessWidget {
+  const _SignOutButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+      child: const Text("Sign Out", style: TextStyle(color: Colors.white)),
     );
   }
 }

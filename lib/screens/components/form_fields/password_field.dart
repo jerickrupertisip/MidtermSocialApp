@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:form_builder_validators/form_builder_validators.dart";
 
 class PasswordField extends StatelessWidget {
   const PasswordField({
@@ -26,12 +27,13 @@ class PasswordField extends StatelessWidget {
         ),
         border: const OutlineInputBorder(),
       ),
-      validator: (enteredPassword) {
-        if (enteredPassword == null || enteredPassword.length < 6) {
-          return "Password must be at least 6 characters";
-        }
-        return null;
-      },
+      validator: FormBuilderValidators.password(
+        minLength: 6,
+        minNumberCount: 0,
+        minUppercaseCount: 0,
+        minLowercaseCount: 0,
+        minSpecialCharCount: 0,
+      ),
     );
   }
 }

@@ -12,6 +12,7 @@ import "package:uniso_social_media_app/models/unison_group.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:intl/intl.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
+import "package:uniso_social_media_app/screens/profile_screen.dart";
 import "package:uniso_social_media_app/screens/services/supabase.dart";
 import "package:uniso_social_media_app/utils.dart";
 
@@ -82,7 +83,9 @@ class _SocialMediaAppState extends State<SocialMediaApp> {
       themeMode: ThemeMode.system,
       home: Scaffold(
         body: _buildPageView(),
-        bottomNavigationBar: _buildBottomNavBar(),
+        bottomNavigationBar: SupabaseService.isSignedIn
+            ? _buildBottomNavBar()
+            : null,
       ),
     );
   }
@@ -874,10 +877,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
     );
   }
 
-  void _goToProfilePage() {}
+  void _goToProfilePage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) {
+          return ProfileScreen();
+        },
+      ),
+    );
+  }
 
   void _goToLoginPage() {
-    debugPrint("To Login Page");
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) {

@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class Profile {
   final String id;
   final String username;
@@ -10,6 +12,14 @@ class Profile {
       id: json["id"],
       username: json["username"],
       avatarUrl: json["avatar_url"],
+    );
+  }
+
+  factory Profile.fromUser(User user) {
+    return Profile(
+      id: user.id,
+      username: user.userMetadata?["username"],
+      avatarUrl: user.userMetadata?["avatar_url"],
     );
   }
 

@@ -80,43 +80,52 @@ class SupabaseService {
     return Profile.fromList(rows);
   }
 
-  static bool get isSignedIn => currentSignedInUser != null;
-
   static Future<void> signUp({
     required String username,
     required String? avatarUrl,
+    required String emailAddress,
+    required String password,
   }) async {
-    if (currentSignedInUser != null) {
-      throw "Already Signed In";
+    var response = await Supabase.instance.client.auth.signUp(
+      email: emailAddress,
+      password: password,
+      data: {"username": username, "avatar_url": avatarUrl},
+    );
+
+    var user = response.user;
+    if (user != null) {
+      currentSignedInUser = Profile.fromUser(user);
     }
+  }
 
-    var profile = await Supabase.instance.client
+  static bool get isSignedIn =>
+      Supabase.instance.client.auth.currentUser != null;
+
+  static Future<bool> isUsernameExist(String username) async {
+    var usernames = await Supabase.instance.client
         .from("profiles")
-        .insert({"username": username, "avatar_url": avatarUrl})
-        .select()
-        .single();
-
-    currentSignedInUser = Profile.fromJson(profile);
+        .select("username")
+        .eq("username", username);
+    return usernames.isNotEmpty;
   }
 
   static Future<void> signIn({
-    required String username,
+    required String emailAddress,
     required String password,
   }) async {
-    if (currentSignedInUser != null) {
-      throw "Already Signed In";
+    var response = await Supabase.instance.client.auth.signInWithPassword(
+      email: emailAddress,
+      password: password,
+    );
+
+    var user = response.user;
+    if (user != null) {
+      currentSignedInUser = Profile.fromUser(user);
     }
+  }
 
-    var profiles = await Supabase.instance.client
-        .from("profiles")
-        .select("*")
-        .eq("username", username);
-
-    if (profiles.isEmpty) {
-      throw "Account with $username, not found";
-    }
-
-    currentSignedInUser = Profile.fromJson(profiles[0]);
-    return;
+  static Future<void> signOut() async {
+    var _ = await Supabase.instance.client.auth.signOut();
+    currentSignedInUser = null;
   }
 }

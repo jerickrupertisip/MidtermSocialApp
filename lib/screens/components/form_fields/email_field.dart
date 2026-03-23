@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "package:form_builder_validators/form_builder_validators.dart";
 
 class EmailField extends StatelessWidget {
   const EmailField({super.key, required this.controller});
@@ -16,14 +17,7 @@ class EmailField extends StatelessWidget {
         prefixIcon: Icon(Icons.email),
         border: OutlineInputBorder(),
       ),
-      validator: (enteredEmail) {
-        if (enteredEmail == null ||
-            enteredEmail.isEmpty ||
-            !enteredEmail.contains("@")) {
-          return "Please enter a valid email address";
-        }
-        return null;
-      },
+      validator: FormBuilderValidators.email(),
     );
   }
 }

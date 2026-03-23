@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
+import "package:uniso_social_media_app/screens/components/form_fields/email_field.dart";
 import "package:uniso_social_media_app/screens/components/form_fields/password_field.dart";
 import "package:uniso_social_media_app/screens/components/form_fields/username_field.dart";
 import "package:uniso_social_media_app/screens/services/supabase.dart";
@@ -30,14 +31,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // Controllers
   final TextEditingController _usernameInputController =
       TextEditingController();
-  final TextEditingController _emailInputController = TextEditingController(
-    text: "example@email.com",
-  );
+  final TextEditingController _emailInputController = TextEditingController();
   final TextEditingController _birthdateInputController =
       TextEditingController();
-  final TextEditingController _passwordInputController = TextEditingController(
-    text: "password",
-  );
+  final TextEditingController _passwordInputController =
+      TextEditingController();
+
+  String? _usernameErrorText;
 
   // UI state
   bool _passwordObscured = true;
@@ -76,6 +76,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _toggleTermsAcceptance(bool? accepted) {
     setState(() => _termsAndConditionsAccepted = accepted ?? false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _usernameInputController.addListener(() {
+      setState(() {
+        _usernameErrorText = null;
+      });
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -196,24 +207,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  void _submitSignUp() {
+  void _submitSignUp() async {
+    if (!_signUpFormKey.currentState!.validate()) return;
+
     setState(() => _signUpRequestInProgress = true);
 
     try {
-      SupabaseService.signUp(
+      var usernameExist = await SupabaseService.isUsernameExist(
+        _usernameInputController.text,
+      );
+      if (usernameExist) {
+        setState(() {
+          _usernameErrorText =
+              "Username already in use. Please choose a different one";
+        });
+        return;
+      }
+
+      await SupabaseService.signUp(
+        emailAddress: _emailInputController.text,
+        password: _passwordInputController.text,
         username: _usernameInputController.text,
         avatarUrl: _selectedAvatarUrl,
       );
-    } on AuthException catch (authError) {
-      debugLog(context, authError.message);
-      return;
-    } catch (e) {
-      debugLog(context, "Error: $e");
-      return;
-    }
 
-    setState(() => _signUpRequestInProgress = false);
-    Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
+    } on AuthException catch (authError) {
+      if (mounted) debugLog(context, authError.message);
+    } catch (e) {
+      if (mounted) debugLog(context, "Error: $e");
+    } finally {
+      setState(() => _signUpRequestInProgress = false);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -244,10 +269,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 16),
                     _FormSectionHeader(),
                     const SizedBox(height: 32),
-                    UsernameField(controller: _usernameInputController),
+                    UsernameField(
+                      errorText: _usernameErrorText,
+                      controller: _usernameInputController,
+                    ),
                     const SizedBox(height: 16),
-                    // EmailField(controller: _emailInputController),
-                    // const SizedBox(height: 16),
+                    EmailField(controller: _emailInputController),
+                    const SizedBox(height: 16),
                     // BirthdateField(
                     //   controller: _birthdateInputController,
                     //   onTap: () => _openBirthdatePicker(),
@@ -339,7 +367,7 @@ class _ProfileAvatarPicker extends StatelessWidget {
                 backgroundColor: Colors.grey[800],
                 backgroundImage: _resolvedAvatarImage(context),
                 child: _hasNoAvatarSelected
-                    ? const Icon(Icons.person, size: 60)
+                    ? const Icon(Icons.person, size: 60, color: Colors.white)
                     : null,
               ),
               Positioned(
