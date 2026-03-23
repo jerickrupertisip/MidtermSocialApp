@@ -12,4 +12,8 @@ class Profile {
       avatarUrl: json["avatar_url"],
     );
   }
+
+  static List<Profile> fromList(List<Map<String, dynamic>> messages) {
+    return messages.map((element) => Profile.fromJson(element)).toList();
+  }
 }

@@ -69,6 +69,16 @@ class SupabaseService {
     return Message.fromList(rows).reversed.toList();
   }
 
+  static Future<List<Profile>> fetchMembers({required String unisonId}) async {
+    final rows = await Supabase.instance.client
+        .from("union_members")
+        .select("...profiles!inner(id, username, avatar_url)")
+        .eq("union_id", unisonId)
+        .order("profiles(username)");
+
+    return Profile.fromList(rows);
+  }
+
   static bool get isSignedIn => currentSignedInUser != null;
 
   static Future<void> signUp({

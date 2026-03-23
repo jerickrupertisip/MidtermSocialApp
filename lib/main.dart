@@ -7,8 +7,8 @@ import "package:flutter/services.dart";
 import "package:http/http.dart" as http;
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
+import "package:uniso_social_media_app/models/profile.dart";
 import "package:uniso_social_media_app/models/unison_group.dart";
-import "package:flutter_lorem/flutter_lorem.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:intl/intl.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
@@ -23,7 +23,7 @@ const _kPostPageAnimationDuration = Duration(milliseconds: 300);
 const _kScrollAnimationDuration = Duration(milliseconds: 300);
 const _kNavAnimationDuration = Duration(milliseconds: 300);
 const _kSidebarWidth = 250.0;
-const _kMemberPanelWidth = 200.0;
+const _kMemberPanelWidth = 250.0;
 const _kDropShadow = Shadow(offset: Offset(1.9, -0.4), blurRadius: 6);
 const _kAvatarRadius = 24.0;
 const _kOverlayTextStyle = TextStyle(
@@ -77,7 +77,7 @@ class _SocialMediaAppState extends State<SocialMediaApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.dark(),
+      theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: ThemeMode.system,
       home: Scaffold(
@@ -437,13 +437,13 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (_) => const Align(
+      builder: (_) => Align(
         alignment: Alignment.centerRight,
         child: Material(
           child: SizedBox(
             width: _kMemberPanelWidth,
             height: double.infinity,
-            child: UnisonMemberList(),
+            child: UnisonMemberList(unisonID: widget.unisonGroup?.id),
           ),
         ),
       ),
@@ -520,38 +520,62 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 // Member list panel
 // ---------------------------------------------------------------------------
 
-class UnisonMemberList extends StatelessWidget {
-  const UnisonMemberList({super.key});
+class UnisonMemberList extends StatefulWidget {
+  final String? unisonID;
+  const UnisonMemberList({super.key, required this.unisonID});
+
+  @override
+  State<UnisonMemberList> createState() => _UnisonMemberListState();
+}
+
+class _UnisonMemberListState extends State<UnisonMemberList> {
+  List<Profile> _unisonMembers = [];
+
+  void _fetchMembers() async {
+    try {
+      var members = await SupabaseService.fetchMembers(
+        unisonId: widget.unisonID ?? "",
+      );
+
+      setState(() {
+        _unisonMembers = members;
+      });
+    } catch (e) {
+      if (mounted) {
+        debugLog(context, "Error: $e");
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: _kMemberPanelWidth,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.separated(
-          itemCount: 50,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (_, _) => const _MemberListItem(),
-        ),
+    return EasyRefresh(
+      header: MaterialHeader(),
+      refreshOnStart: true,
+      footer: MaterialFooter(
+        position: IndicatorPosition.above,
+        clamping: false,
+      ),
+      onRefresh: _fetchMembers,
+      child: ListView.separated(
+        itemCount: _unisonMembers.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (_, index) =>
+            _MemberListItem(member: _unisonMembers[index]),
       ),
     );
   }
 }
 
 class _MemberListItem extends StatelessWidget {
-  const _MemberListItem();
+  final Profile member;
+  const _MemberListItem({required this.member});
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: () {},
-      child: Row(
-        children: [
-          const Icon(Icons.person),
-          Text(lorem(paragraphs: 1, words: 1)),
-        ],
-      ),
+      child: Row(children: [const Icon(Icons.person), Text(member.username)]),
     );
   }
 }
