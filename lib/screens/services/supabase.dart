@@ -60,9 +60,10 @@ class SupabaseService {
   }) async {
     final rows = await Supabase.instance.client
         .from("messages")
-        .select("content, created_at")
+        .select(
+          "id, content, created_at, ...profiles!inner(user_id:id, username, avatar_url)",
+        )
         .eq("union_id", unisonId)
-        .limit(pageSize)
         .order("created_at", ascending: false)
         .range(alreadyLoaded, alreadyLoaded + pageSize);
 
@@ -74,7 +75,7 @@ class SupabaseService {
         .from("union_members")
         .select("...profiles!inner(id, username, avatar_url)")
         .eq("union_id", unisonId)
-        .order("profiles(username)");
+        .order("profiles(username)", ascending: true);
 
     return Profile.fromList(rows);
   }

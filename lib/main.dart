@@ -773,10 +773,11 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildMessageHeader(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: .start,
       children: [
         Text(
-          isFromOtherUser ? "User A" : "User B",
+          message.sentBy.username,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(width: 8),
