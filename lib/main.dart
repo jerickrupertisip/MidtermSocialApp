@@ -442,7 +442,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
         child: Material(
           child: SizedBox(
             width: _kMemberPanelWidth,
-            height: double.infinity,
+            height: MediaQuery.of(context).size.height,
             child: UnisonMemberList(unisonID: widget.unisonGroup?.id),
           ),
         ),
