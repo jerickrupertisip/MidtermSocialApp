@@ -15,6 +15,7 @@
  */
 import { createSeedClient } from "@snaplet/seed";
 import { copycat } from "@snaplet/copycat";
+import { hashSync } from "bcrypt";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,67 +66,79 @@ const main = async () => {
 
   // Wipe and start fresh.
   await seed.$resetDatabase();
+  const HASHED_PASSWORD = hashSync("password", 10);
 
-  // ------------------------------------------------------------------
-  // 1. Profiles
-  // ------------------------------------------------------------------
+  const { users } = await seed.users((x) =>
+    x(count.users, (ctx) => ({
+      instance_id: "00000000-0000-0000-0000-000000000000",
+      aud: "authenticated",
+      role: "authenticated",
+      email: copycat.email(ctx.seed, { domain: "email.com" }).toLowerCase(),
+      encrypted_password: HASHED_PASSWORD,
+      email_confirmed_at: new Date().toISOString(), // marks email as verified
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      invited_at: null,
+      confirmation_sent_at: null,
+      // recovery_token: "",
+      recovery_sent_at: null,
+      email_change: "",
+      email_change_sent_at: null,
+      last_sign_in_at: null,
+      raw_app_meta_data: {
+        provider: "email",
+        providers: ["email"],
+      },
+      raw_user_meta_data: {
+        email_verified: true,
+        username: copycat.fullName(ctx.seed),
+      },
+      is_super_admin: null,
+      // email_change_token_new: "",
+      phone: null,
+      phone_confirmed_at: null,
+      phone_change: "",
+      phone_change_token: "",
+      phone_change_sent_at: null,
+      // email_change_token_current: "",
+      email_change_confirm_status: 0,
+      banned_until: null,
+      // reauthentication_token: "",
+      reauthentication_sent_at: null,
+      is_sso_user: false,
+      deleted_at: null,
+      is_anonymous: false,
+    }))
+  );
+
   const { profiles } = await seed.profiles((x) =>
     x(count.users, ({ seed: s }) => ({
       username: copycat.username(s),
     }))
   );
 
-  // ------------------------------------------------------------------
-  // 2. Unions (groups) — with community names, NOT street names
-  // ------------------------------------------------------------------
   const { unions } = await seed.unions((x) =>
     x(count.unions, ({ seed: s }) => ({
       name: communityName(s),
     }))
   );
 
-  // ------------------------------------------------------------------
-  // 3. Union members — links profiles ↔ unions (many-to-many junction).
-  //    Snaplet's `connect` option draws from the pools we supply, so
-  //    every member row is guaranteed to reference a valid profile and union.
-  // ------------------------------------------------------------------
   const { union_members } = await seed.union_members(
     (x) => x(count.members),
     { connect: { profiles, unions } }
   );
 
-  // ------------------------------------------------------------------
-  // 4. Public messages — ONLY authored by profiles that are already
-  //    members of the target union.
-  //
-  //    Strategy: iterate over the seeded `union_members` rows in a
-  //    round-robin fashion. Each message is authored by the profile from
-  //    that membership row and posted in the matching union. This
-  //    guarantees the business rule "author must be a member of the union"
-  //    holds for every single row without any extra lookups.
-  //
-  //    Sequential created_at: starts at 2025-01-01 00:00 UTC and advances
-  //    by one minute per message, giving a clean chronological history.
-  // ------------------------------------------------------------------
   const startDate = new Date(Date.UTC(2025, 0, 1, 0, 0, 0));
 
   await seed.public_messages((x) =>
     x(count.messages, ({ index }) => {
-      // Pick a membership row round-robin — every message maps to a
-      // verified (profile, union) pair that exists in union_members.
       const membership = union_members[index % union_members.length];
 
       return {
-        // Human-readable sequential content; easy to sort / debug.
         content: `Message #${index + 1}`,
-
-        // Monotonically increasing timestamp — exactly one minute per message.
         created_at: new Date(
           startDate.getTime() + index * 60_000
         ).toISOString(),
-
-        // Field-level connect: wire FK columns directly to the validated
-        // membership row, ensuring referential integrity at the column level.
         user_id: membership.user_id,
         union_id: membership.union_id,
       };

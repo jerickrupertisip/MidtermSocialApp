@@ -12,6 +12,9 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "bcrypt": "^6.0.0"
+  },
   "devDependencies": {
     "@snaplet/copycat": "^6.0.0",
     "@snaplet/seed": "0.98.0",

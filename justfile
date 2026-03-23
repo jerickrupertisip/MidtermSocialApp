@@ -37,8 +37,7 @@ sync-db:
 seed-reset-db:
   #!/usr/bin/env bash
   cd supabase
-  pnpm seed
-  supabase db reset
+  pnpm seed && supabase db reset
 
 [linux]
 migrate-db name:

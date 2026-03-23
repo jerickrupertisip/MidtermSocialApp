@@ -1,0 +1,1 @@
+truncate auth.users cascade
