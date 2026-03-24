@@ -191,11 +191,16 @@ class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
     widget.onUnisonGroupSelected(_unisonGroups[groupIndex]);
   }
 
+  void _onUnionCreationSucess() async {
+    await _fetchGroups();
+  }
+
   void _openCreateUnisonDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const CreateNewUnisonDialog(),
+      builder: (_) =>
+          CreateNewUnisonDialog(onUnionCreationSucess: _onUnionCreationSucess),
     );
   }
 
@@ -325,7 +330,8 @@ class _UnisonActionsMenu extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class CreateNewUnisonDialog extends StatefulWidget {
-  const CreateNewUnisonDialog({super.key});
+  final void Function() onUnionCreationSucess;
+  const CreateNewUnisonDialog({super.key, required this.onUnionCreationSucess});
 
   @override
   State<CreateNewUnisonDialog> createState() => _CreateNewUnisonDialogState();
@@ -341,7 +347,10 @@ class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
       setState(() => _isLoading = true);
       try {
         await SupabaseService.createUnison(name: _nameController.text);
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) {
+          Navigator.of(context).pop();
+          widget.onUnionCreationSucess();
+        }
       } catch (e) {
         if (mounted) debugLog(context, e.toString());
       } finally {
