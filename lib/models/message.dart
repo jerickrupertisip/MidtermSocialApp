@@ -19,7 +19,6 @@ class Message {
   });
 
   factory Message.fromMap(Map<String, dynamic> map, {Profile? profile}) {
-    debugPrint(map.toString());
     // 1. Centralized Type Mapping
     final type = switch (map["type"]) {
       "message" => MessageType.message,

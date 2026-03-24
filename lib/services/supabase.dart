@@ -33,6 +33,27 @@ class SupabaseService {
     );
   }
 
+  static Future<void> createUnison({required String name}) async {
+    var id = Supabase.instance.client.auth.currentUser?.id;
+    if (id == null) {
+      throw "Currenly not logged in";
+    }
+
+    var unisons = await Supabase.instance.client
+        .from("unisons")
+        .select("name")
+        .eq("name", name);
+
+    if (unisons.isNotEmpty) {
+      throw "Unison named '$name' already exists, choose another name.";
+    }
+
+    await Supabase.instance.client.from("unisons").insert({
+      "name": name,
+      "creator_id": id,
+    });
+  }
+
   static Future<Message> sendMedia({
     required String? mediaUrl,
     required String groupId,

@@ -6,6 +6,7 @@ import "package:file_picker/file_picker.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
+import "package:form_builder_validators/form_builder_validators.dart";
 import "package:http/http.dart" as http;
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
@@ -189,7 +190,11 @@ class _UnisonGroupSidebarState extends State<UnisonGroupSidebar> {
   }
 
   void _openCreateUnisonDialog() {
-    showDialog(context: context, builder: (_) => const CreateNewUnisonDialog());
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const CreateNewUnisonDialog(),
+    );
   }
 
   /// Delegates the network call to [SupabaseService]; this widget only
@@ -326,10 +331,20 @@ class CreateNewUnisonDialog extends StatefulWidget {
 
 class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
   final _createUnisonFormKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  bool _isLoading = false;
 
-  void _onConfirmCreate() {
+  void _onConfirmCreate() async {
     if (_createUnisonFormKey.currentState!.validate()) {
-      // Create
+      setState(() => _isLoading = true);
+      try {
+        SupabaseService.createUnison(name: _nameController.text);
+        if (mounted) Navigator.of(context).pop();
+      } catch (e) {
+        debugLog(context, e.toString());
+      } finally {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -343,25 +358,24 @@ class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
   }
 
   Widget _buildForm() {
-    return Form(
-      key: _createUnisonFormKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [_buildNameField()],
+    return SizedBox(
+      width: 300,
+      child: Form(
+        key: _createUnisonFormKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [_buildNameField()],
+        ),
       ),
     );
   }
 
   Widget _buildNameField() {
     return TextFormField(
-      decoration: const InputDecoration(labelText: "Name", hintText: "Name"),
-      validator: (enteredName) {
-        if (enteredName == null || enteredName.length < 4) {
-          return "Name must be at least 4 characters";
-        }
-        return null;
-      },
+      controller: _nameController,
+      decoration: InputDecoration(labelText: "Name", hintText: "Name"),
+      validator: FormBuilderValidators.minLength(6),
     );
   }
 
@@ -371,7 +385,10 @@ class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
         onPressed: () => Navigator.of(context).pop(),
         child: const Text("Cancel"),
       ),
-      ElevatedButton(onPressed: _onConfirmCreate, child: const Text("Create")),
+      ElevatedButton(
+        onPressed: _isLoading ? null : _onConfirmCreate,
+        child: _isLoading ? CircularProgressIndicator() : Text("Create"),
+      ),
     ];
   }
 }
