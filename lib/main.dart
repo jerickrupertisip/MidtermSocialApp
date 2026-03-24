@@ -1193,25 +1193,45 @@ class FullScreenPostPage extends StatelessWidget {
             loadingProgress: downloadProgress.progress,
           ),
       imageBuilder: (_, resolvedImageProvider) =>
-          _PostImageStack(imageProvider: resolvedImageProvider, post: post),
+          PostImageStack(imageProvider: resolvedImageProvider, post: post),
     );
   }
 }
 
-class _PostImageStack extends StatelessWidget {
+class PostImageStack extends StatefulWidget {
   final ImageProvider imageProvider;
   final Post post;
 
-  const _PostImageStack({required this.imageProvider, required this.post});
+  const PostImageStack({
+    super.key,
+    required this.imageProvider,
+    required this.post,
+  });
 
-  void _onJoiningUnison() {}
+  @override
+  State<PostImageStack> createState() => _PostImageStackState();
+}
+
+class _PostImageStackState extends State<PostImageStack> {
+  bool? _isJoined; // null = not yet loaded
+
+  Future<bool> _checkIsJoined() async {
+    final result = await SupabaseService.isJoined(unionId: widget.post.unionId);
+    _isJoined = result;
+    return result;
+  }
+
+  void _onJoiningUnison() async {
+    await SupabaseService.joinUnion(unionId: widget.post.unionId);
+    setState(() => _isJoined = true);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image(image: imageProvider, fit: BoxFit.cover),
+          child: Image(image: widget.imageProvider, fit: BoxFit.cover),
         ),
         Positioned(
           bottom: 0,
@@ -1223,7 +1243,7 @@ class _PostImageStack extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    post.authorName,
+                    widget.post.authorName,
                     style: _kOverlayTextStyle.merge(
                       const TextStyle(fontSize: 24),
                     ),
@@ -1231,12 +1251,30 @@ class _PostImageStack extends StatelessWidget {
                   Row(
                     spacing: 8,
                     children: [
+                      Text(
+                        "From ${widget.post.unionName}",
+                        style: _kOverlayTextStyle,
+                      ),
                       if (Supabase.instance.client.auth.currentUser != null)
-                        ElevatedButton(
-                          onPressed: _onJoiningUnison,
-                          child: const Text("Join Union"),
+                        FutureBuilder<bool>(
+                          future: _checkIsJoined(),
+                          builder: (context, snapshot) {
+                            if (_isJoined == true) {
+                              return const SizedBox.shrink();
+                            }
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const SizedBox.shrink();
+                            }
+                            if (snapshot.hasData && snapshot.data == false) {
+                              return ElevatedButton(
+                                onPressed: _onJoiningUnison,
+                                child: const Text("Join Union"),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
                         ),
-                      Text("From ${post.unionName}", style: _kOverlayTextStyle),
                     ],
                   ),
                 ],
