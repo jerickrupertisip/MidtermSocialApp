@@ -7,7 +7,6 @@ import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:http/http.dart" as http;
-import "package:mime/mime.dart";
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:uniso_social_media_app/models/profile.dart";
@@ -16,9 +15,8 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "package:intl/intl.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
 import "package:uniso_social_media_app/screens/profile_screen.dart";
-import "package:uniso_social_media_app/screens/services/supabase.dart";
+import "package:uniso_social_media_app/services/supabase.dart";
 import "package:uniso_social_media_app/utils.dart";
-import "package:video_player/video_player.dart";
 
 // ---------------------------------------------------------------------------
 // Constants

@@ -3,10 +3,10 @@ import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
-import "package:uniso_social_media_app/screens/components/form_fields/email_field.dart";
-import "package:uniso_social_media_app/screens/components/form_fields/password_field.dart";
-import "package:uniso_social_media_app/screens/components/form_fields/username_field.dart";
-import "package:uniso_social_media_app/screens/services/supabase.dart";
+import "package:uniso_social_media_app/components/form_fields/email_field.dart";
+import "package:uniso_social_media_app/components/form_fields/password_field.dart";
+import "package:uniso_social_media_app/components/form_fields/username_field.dart";
+import "package:uniso_social_media_app/services/supabase.dart";
 import "package:uniso_social_media_app/utils.dart";
 
 // ---------------------------------------------------------------------------
