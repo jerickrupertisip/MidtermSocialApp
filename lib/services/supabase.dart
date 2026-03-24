@@ -47,6 +47,34 @@ class SupabaseService {
     );
   }
 
+  static Future<void> joinUnion({required String unionId}) async {
+    var id = Supabase.instance.client.auth.currentUser?.id;
+    if (id == null) {
+      throw "Currenly not logged in";
+    }
+
+    await Supabase.instance.client.from("union_members").insert({
+      "union_id": unionId,
+      "user_id": id,
+    });
+  }
+
+  static Future<bool> isJoined({required String unionId}) async {
+    var id = Supabase.instance.client.auth.currentUser?.id;
+    if (id == null) {
+      throw "Currenly not logged in";
+    }
+
+    var result = await Supabase.instance.client
+        .from("union_members")
+        .select("*")
+        .eq("union_id", unionId)
+        .eq("user_id", id)
+        .maybeSingle();
+
+    return result != null;
+  }
+
   static Future<void> createUnison({required String name}) async {
     var id = Supabase.instance.client.auth.currentUser?.id;
     if (id == null) {
