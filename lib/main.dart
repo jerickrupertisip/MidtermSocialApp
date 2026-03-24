@@ -1,10 +1,13 @@
 import "dart:convert";
+import "dart:io";
 import "package:cached_network_image/cached_network_image.dart";
 import "package:easy_refresh/easy_refresh.dart";
+import "package:file_picker/file_picker.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:http/http.dart" as http;
+import "package:mime/mime.dart";
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:uniso_social_media_app/models/profile.dart";
@@ -15,6 +18,7 @@ import "package:uniso_social_media_app/screens/auth/sign_in_screen.dart";
 import "package:uniso_social_media_app/screens/profile_screen.dart";
 import "package:uniso_social_media_app/screens/services/supabase.dart";
 import "package:uniso_social_media_app/utils.dart";
+import "package:video_player/video_player.dart";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -392,6 +396,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       TextEditingController();
   RealtimeChannel? _supabaseRoomChannel;
   bool _isMessageSending = false;
+  List<File> _selectedFiles = [];
 
   bool get _isGroupSelected => widget.unisonGroup != null;
 
@@ -447,6 +452,20 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
     }
   }
 
+  void _onUploadPressed() async {
+    var selectedFile = await FilePicker.platform.pickFiles(
+      type: FileType.media,
+    );
+
+    var path = selectedFile?.files.single.path;
+    if (path != null) {
+      debugPrint(path);
+      setState(() {
+        _selectedFiles.add(File(path));
+      });
+    }
+  }
+
   void _openMemberListPanel() {
     showDialog(
       context: context,
@@ -471,8 +490,28 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
         _buildMembersListButton(),
         const Divider(),
         _buildFeedArea(),
+        _buildMediaList(),
+        SizedBox(height: 8),
         _buildMessageInputRow(),
       ],
+    );
+  }
+
+  Widget _buildMediaList() {
+    return Row(
+      spacing: 8,
+      children: _selectedFiles.asMap().entries.map((entry) {
+        int index = entry.key;
+        var file = entry.value;
+
+        return MediaItem(
+          index: index,
+          file: file,
+          onRemove: (index) => setState(() {
+            _selectedFiles.removeAt(index);
+          }),
+        );
+      }).toList(), // Converts the Map iterable back into a List<Widget>
     );
   }
 
@@ -507,7 +546,12 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 
   Widget _buildMessageInputRow() {
     return Row(
+      spacing: 8,
       children: [
+        IconButton.filled(
+          onPressed: _isGroupSelected ? _onUploadPressed : null,
+          icon: Icon(Icons.add),
+        ),
         Expanded(
           child: TextField(
             enabled: _isGroupSelected,
@@ -519,13 +563,57 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
             ),
           ),
         ),
-        IconButton(
+        IconButton.filled(
           onPressed: _isGroupSelected
               ? (_isMessageSending ? null : _submitOutgoingMessage)
               : null,
           icon: const Icon(Icons.send),
         ),
       ],
+    );
+  }
+}
+
+class MediaItem extends StatefulWidget {
+  final int index;
+  final File file;
+  final void Function(int) onRemove;
+
+  const MediaItem({
+    super.key,
+    required this.index,
+    required this.file,
+    required this.onRemove,
+  });
+
+  @override
+  State<MediaItem> createState() => _MediaItemState();
+}
+
+class _MediaItemState extends State<MediaItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Image.file(
+            File(widget.file.path),
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+          ),
+          if (_isHovered)
+            IconButton(
+              onPressed: () => widget.onRemove(widget.index),
+              icon: const Icon(Icons.close),
+            ),
+        ],
+      ),
     );
   }
 }

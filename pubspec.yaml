@@ -57,6 +57,12 @@ dependencies:
   # image_picker: Allows users to select images from their device's gallery or take new photos with the camera.
   image_picker: ^1.2.1
   form_builder_validators: ^11.3.0
+  file_picker: ^10.3.10
+  # get_thumbnail_video: ^0.7.3
+  thumbnailer: ^3.2.0
+  mime: ^2.0.0
+  path_provider: ^2.1.5
+  video_player: ^2.11.1
 
 dev_dependencies:
   flutter_test:
