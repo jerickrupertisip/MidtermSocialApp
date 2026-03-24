@@ -21,7 +21,15 @@ class SupabaseService {
   }
 
   static Future<List<UnisonGroup>> fetchUnisonGroups() async {
-    final rows = await Supabase.instance.client.from("unions").select("*");
+    var id = Supabase.instance.client.auth.currentUser?.id;
+    if (id == null) {
+      throw "Currenly not logged in";
+    }
+
+    final rows = await Supabase.instance.client
+        .from("unions")
+        .select("id, name, ...union_members!inner()")
+        .eq('union_members.user_id', id);
     return UnisonGroup.fromList(rows);
   }
 

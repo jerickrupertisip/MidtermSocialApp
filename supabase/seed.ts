@@ -53,9 +53,9 @@ function communityName(seed: string): string {
 // ---------------------------------------------------------------------------
 const count = {
   users: 60,
-  unions: 6,
+  unions: 30,
   messages: 600,
-  members: 60,   // total union_member rows (distributed across unions)
+  members: 60,
 } as const;
 
 // ---------------------------------------------------------------------------
