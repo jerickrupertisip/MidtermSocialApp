@@ -1,8 +1,13 @@
 import "dart:io";
+import "dart:ui_web";
 
+import "package:mime/mime.dart";
+import "package:path/path.dart";
+import "package:file_picker/file_picker.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/models/message.dart";
+import "package:uniso_social_media_app/models/post.dart";
 import "package:uniso_social_media_app/models/profile.dart";
 import "package:uniso_social_media_app/models/unison_group.dart";
 
@@ -65,40 +70,43 @@ class SupabaseService {
   }
 
   static Future<Message> sendMedia({
-    required String mediaPath,
+    required PlatformFile file,
     required String groupId,
   }) async {
-    // 1. Insert the message first to get the generated id
     var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
           "message_type": "media",
           "content": null,
-          "media_url": null, // leave null until we have the real URL
+          "media_url": null,
           "union_id": groupId,
           "user_id": Supabase.instance.client.auth.currentUser?.id,
         })
         .select()
         .single();
 
-    final messageId = newMessage["id"].toString();
+    var messageId = newMessage["id"].toString();
 
-    // 2. Upload the file using the message id as the filename
-    final fileExtension = mediaPath.contains(".")
-        ? ".${mediaPath.split(".").last}"
-        : "";
-    final newPath = "$messageId$fileExtension";
+    var mimeType = lookupMimeType(file.name)!;
 
-    await Supabase.instance.client.storage
+    var ext = extension(mimeType);
+    var fileId = "$messageId.$ext";
+
+    var bytes = file.bytes;
+    if (bytes != null) {
+      await Supabase.instance.client.storage
+          .from("medias")
+          .uploadBinary(fileId, bytes);
+    } else {
+      await Supabase.instance.client.storage
+          .from("medias")
+          .upload(fileId, File(file.path!));
+    }
+
+    var publicUrl = Supabase.instance.client.storage
         .from("medias")
-        .upload(newPath, File(mediaPath));
+        .getPublicUrl(fileId);
 
-    // 3. Get the public URL
-    final publicUrl = Supabase.instance.client.storage
-        .from("medias")
-        .getPublicUrl(newPath);
-
-    // 4. Update the message row with the public URL
     newMessage = await Supabase.instance.client
         .from("messages")
         .update({"media_url": publicUrl})
@@ -106,8 +114,8 @@ class SupabaseService {
         .select()
         .single();
 
-    final user = Supabase.instance.client.auth.currentUser!;
-    final profile = Profile.fromUser(user);
+    var user = Supabase.instance.client.auth.currentUser!;
+    var profile = Profile.fromUser(user);
 
     return Message.fromMap(newMessage, profile: profile);
   }
@@ -140,6 +148,31 @@ class SupabaseService {
     channel.sendBroadcastMessage(event: "message_sent", payload: messageData);
   }
 
+  static Future<List<Post>> fetchPosts({
+    required String unisonId,
+    required int alreadyLoaded,
+    int pageSize = 3,
+  }) async {
+    final posts = await Supabase.instance.client
+        .from("messages")
+        .select("""
+        id,
+        media_url,
+        created_at,
+        ...unions!inner(
+          union_id:id
+        ),
+        ...profiles!inner(
+          author_name:username,
+          avatar_url
+        )
+        """)
+        .eq("message_type", "media")
+        .range(alreadyLoaded, pageSize);
+
+    return Post.fromList(posts).reversed.toList();
+  }
+
   static Future<List<Message>> fetchMessages({
     required String unisonId,
     required int alreadyLoaded,
@@ -152,7 +185,7 @@ class SupabaseService {
         )
         .eq("union_id", unisonId)
         .order("created_at", ascending: false)
-        .range(alreadyLoaded, alreadyLoaded + pageSize);
+        .range(alreadyLoaded, alreadyLoaded + pageSize - 1);
 
     return Message.fromList(rows).reversed.toList();
   }

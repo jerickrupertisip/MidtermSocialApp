@@ -61,6 +61,8 @@ dependencies:
   # get_thumbnail_video: ^0.7.3
   thumbnailer: ^3.2.0
   path_provider: ^2.1.5
+  path: ^1.9.1
+  mime: ^2.0.0
 
 dev_dependencies:
   flutter_test:

@@ -411,7 +411,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       TextEditingController();
   RealtimeChannel? _supabaseRoomChannel;
   bool _isMessageSending = false;
-  final List<File> _selectedFiles = [];
+  final List<PlatformFile> _selectedFiles = [];
 
   bool get _isGroupSelected => widget.unisonGroup != null;
 
@@ -452,9 +452,9 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 
     try {
       if (hasFiles) {
-        for (var mediaPath in _selectedFiles) {
+        for (var file in _selectedFiles) {
           final insertedMessageData = await SupabaseService.sendMedia(
-            mediaPath: mediaPath.path,
+            file: file,
             groupId: groupId,
           );
 
@@ -492,10 +492,10 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       type: FileType.image,
     );
 
-    var path = selectedFile?.files.single.path;
+    var path = selectedFile?.files.single;
     if (path != null) {
       setState(() {
-        _selectedFiles.add(File(path));
+        _selectedFiles.add(path);
       });
     }
   }
@@ -610,7 +610,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 
 class MediaItem extends StatefulWidget {
   final int index;
-  final File file;
+  final PlatformFile file;
   final void Function(int) onRemove;
 
   const MediaItem({
@@ -635,19 +635,36 @@ class _MediaItemState extends State<MediaItem> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Image.file(
-            File(widget.file.path),
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-          ),
+          _buildImage(),
           if (_isHovered)
             IconButton(
               onPressed: () => widget.onRemove(widget.index),
-              icon: const Icon(Icons.close),
+              icon: const Icon(Icons.close, color: Colors.white),
+              style: IconButton.styleFrom(backgroundColor: Colors.black45),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildImage() {
+    final bytes = widget.file.bytes;
+    final path = widget.file.path;
+
+    // 1. Always prefer bytes if available (Works on Web and Mobile)
+    if (bytes != null) {
+      return Image.memory(bytes, width: 60, height: 60, fit: BoxFit.cover);
+    }
+
+    // 2. Fallback to File path for Mobile/Desktop if bytes weren't loaded
+    if (path != null) {
+      return Image.file(File(path), width: 60, height: 60, fit: BoxFit.cover);
+    }
+
+    return const SizedBox(
+      width: 60,
+      height: 60,
+      child: Icon(Icons.broken_image),
     );
   }
 }

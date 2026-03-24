@@ -113,7 +113,6 @@ file_size_limit = "50MiB"
 
 [storage.buckets.medias]
 public = true
-objects_path = "./buckets/medias/"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]

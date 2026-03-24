@@ -19,7 +19,6 @@ class Message {
   });
 
   factory Message.fromMap(Map<String, dynamic> map, {Profile? profile}) {
-    debugPrint(map.toString());
     final messageType = switch (map["message_type"]) {
       "message" => MessageType.message,
       "media" => MessageType.media,
