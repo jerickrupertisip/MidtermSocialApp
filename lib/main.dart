@@ -10,6 +10,7 @@ import "package:form_builder_validators/form_builder_validators.dart";
 import "package:http/http.dart" as http;
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
+import "package:uniso_social_media_app/models/post.dart";
 import "package:uniso_social_media_app/models/profile.dart";
 import "package:uniso_social_media_app/models/unison_group.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
@@ -960,16 +961,16 @@ class HomeFeedScreen extends StatefulWidget {
 
 class _HomeFeedScreenState extends State<HomeFeedScreen> {
   final _verticalPostPageController = PageController(initialPage: 0);
-  final List<PicsumImage> _fetchedPostImages = [];
+  final List<Post> _fetchedPosts = [];
 
   int _visiblePostPageIndex = 0;
-  int _nextPicsumApiPage = 0;
-  bool _isFetchingPostImages = false;
+  bool _isFetchingPosts = false;
+  bool _hasNoMorePosts = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchNextBatchOfPostImages();
+    _fetchNextBatchOfPosts();
     _verticalPostPageController.addListener(_onPostPageScrolled);
   }
 
@@ -980,49 +981,46 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   void _onPostPageScrolled() {
-    if (_visiblePostPageIndex > _fetchedPostImages.length - 2) {
-      _fetchNextBatchOfPostImages();
+    if (_visiblePostPageIndex > _fetchedPosts.length - 2) {
+      _fetchNextBatchOfPosts();
     }
   }
 
-  Future<List<PicsumImage>> _fetchPicsumImages(
-    int picsumPage, {
-    int? limit = 4,
-  }) async {
-    final httpResponse = await http.get(
-      Uri.parse("https://picsum.photos/v2/list?page=$picsumPage&limit=$limit"),
-    );
-
-    if (httpResponse.statusCode == 200) {
-      final decodedImageData = jsonDecode(httpResponse.body) as List<dynamic>;
-      return decodedImageData
-          .map((imageJson) => PicsumImage.fromJson(imageJson))
-          .toList();
-    }
-    throw Exception("Failed to load images");
-  }
-
-  Future<void> _fetchNextBatchOfPostImages() async {
-    if (_isFetchingPostImages) return;
+  Future<void> _fetchNextBatchOfPosts() async {
+    if (_isFetchingPosts) return;
     if (!mounted) return;
 
-    setState(() => _isFetchingPostImages = true);
+    setState(() {
+      _isFetchingPosts = true;
+      _hasNoMorePosts = false;
+    });
 
     try {
-      final newlyFetchedImages = await _fetchPicsumImages(_nextPicsumApiPage);
-      setState(() {
-        _fetchedPostImages.addAll(newlyFetchedImages);
-        _nextPicsumApiPage++;
-      });
+      final newPosts = await SupabaseService.fetchPosts(
+        unisonId: '', // business logic TBD
+        alreadyLoaded: _fetchedPosts.length,
+      );
+      if (!mounted) return;
+      if (newPosts.isEmpty) {
+        setState(() => _hasNoMorePosts = true);
+      } else {
+        setState(() => _fetchedPosts.addAll(newPosts));
+      }
     } finally {
-      setState(() => _isFetchingPostImages = false);
+      if (mounted) setState(() => _isFetchingPosts = false);
     }
   }
 
   void _navigateToNextPost() {
+    // If we're at the last real post and showing "no more posts", try fetching
+    if (_hasNoMorePosts && _visiblePostPageIndex >= _fetchedPosts.length - 1) {
+      _fetchNextBatchOfPosts();
+      return;
+    }
+
     final targetPostIndex = (_visiblePostPageIndex + 1).clamp(
       0,
-      _fetchedPostImages.length - 1,
+      _fetchedPosts.length - 1,
     );
     _visiblePostPageIndex = targetPostIndex;
     _verticalPostPageController.animateToPage(
@@ -1035,7 +1033,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   void _navigateToPreviousPost() {
     final targetPostIndex = (_visiblePostPageIndex - 1).clamp(
       0,
-      _fetchedPostImages.length - 1,
+      _fetchedPosts.length - 1,
     );
     _visiblePostPageIndex = targetPostIndex;
     _verticalPostPageController.animateToPage(
@@ -1046,23 +1044,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   void _goToProfilePage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) {
-          return ProfileScreen();
-        },
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => ProfileScreen()));
   }
 
   void _goToLoginPage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) {
-          return SignInScreen();
-        },
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => SignInScreen()));
   }
 
   @override
@@ -1079,16 +1069,36 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   }
 
   Widget _buildPostPageView() {
-    if (_fetchedPostImages.isEmpty) return const FullScreenLoadingIndicator();
+    if (_fetchedPosts.isEmpty && _isFetchingPosts) {
+      return const FullScreenLoadingIndicator();
+    }
+
+    if (_fetchedPosts.isEmpty && _hasNoMorePosts) {
+      return const _NoMorePostsIndicator();
+    }
+
+    // +1 item count when _hasNoMorePosts to show the end screen as last "page"
+    final itemCount = _fetchedPosts.length + (_hasNoMorePosts ? 1 : 0);
 
     return PageView.builder(
       controller: _verticalPostPageController,
       scrollDirection: Axis.vertical,
-      itemCount: _fetchedPostImages.length,
-      onPageChanged: (newPageIndex) =>
-          setState(() => _visiblePostPageIndex = newPageIndex),
-      itemBuilder: (_, postIndex) =>
-          FullScreenPostPage(postImage: _fetchedPostImages[postIndex]),
+      itemCount: itemCount,
+      onPageChanged: (newPageIndex) {
+        setState(() => _visiblePostPageIndex = newPageIndex);
+        // User swiped to the "no more posts" page — attempt a re-fetch
+        if (_hasNoMorePosts && newPageIndex == _fetchedPosts.length) {
+          _fetchNextBatchOfPosts();
+        }
+      },
+      itemBuilder: (_, postIndex) {
+        if (postIndex == _fetchedPosts.length) {
+          return _isFetchingPosts
+              ? const FullScreenLoadingIndicator()
+              : const _NoMorePostsIndicator();
+        }
+        return FullScreenPostPage(post: _fetchedPosts[postIndex]);
+      },
     );
   }
 
@@ -1156,7 +1166,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
         radius: _kAvatarRadius,
         child: username != null
             ? Text(getInitials(username))
-            : Icon(Icons.person, color: Colors.white),
+            : const Icon(Icons.person, color: Colors.white),
       ),
     );
   }
@@ -1167,35 +1177,31 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 // ---------------------------------------------------------------------------
 
 class FullScreenPostPage extends StatelessWidget {
-  final PicsumImage postImage;
+  final Post post;
 
-  const FullScreenPostPage({super.key, required this.postImage});
+  const FullScreenPostPage({super.key, required this.post});
 
   @override
   Widget build(BuildContext context) {
     return CachedNetworkImage(
       fadeInDuration: Duration.zero,
-      imageUrl: postImage.downloadUrl,
+      imageUrl: post.mediaUrl,
       fit: BoxFit.cover,
       progressIndicatorBuilder: (_, _, downloadProgress) =>
           FullScreenLoadingIndicator(
             loadingProgress: downloadProgress.progress,
           ),
-      imageBuilder: (_, resolvedImageProvider) => _PostImageStack(
-        imageProvider: resolvedImageProvider,
-        author: postImage.author,
-      ),
+      imageBuilder: (_, resolvedImageProvider) =>
+          _PostImageStack(imageProvider: resolvedImageProvider, post: post),
     );
   }
 }
 
-/// The [Stack] that overlays the author credit on top of the full-screen
-/// post image.
 class _PostImageStack extends StatelessWidget {
   final ImageProvider imageProvider;
-  final String author;
+  final Post post;
 
-  const _PostImageStack({required this.imageProvider, required this.author});
+  const _PostImageStack({required this.imageProvider, required this.post});
 
   void _onJoiningUnison() {}
 
@@ -1212,20 +1218,22 @@ class _PostImageStack extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: .start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  author,
-                  style: _kOverlayTextStyle.merge(TextStyle(fontSize: 24)),
+                  post.authorName,
+                  style: _kOverlayTextStyle.merge(
+                    const TextStyle(fontSize: 24),
+                  ),
                 ),
                 Row(
                   spacing: 8,
                   children: [
                     ElevatedButton(
                       onPressed: _onJoiningUnison,
-                      child: Text("Join Unison"),
+                      child: const Text("Join Union"),
                     ),
-                    Text("From Unison", style: _kOverlayTextStyle),
+                    Text("From ${post.unionName}", style: _kOverlayTextStyle),
                   ],
                 ),
               ],
@@ -1233,6 +1241,36 @@ class _PostImageStack extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// No more posts indicator
+// ---------------------------------------------------------------------------
+
+class _NoMorePostsIndicator extends StatelessWidget {
+  const _NoMorePostsIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline, color: Colors.white54, size: 48),
+          SizedBox(height: 12),
+          Text(
+            "You're all caught up!",
+            style: TextStyle(color: Colors.white70, fontSize: 18),
+          ),
+          SizedBox(height: 4),
+          Text(
+            "Swipe down to check for new posts",
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 }

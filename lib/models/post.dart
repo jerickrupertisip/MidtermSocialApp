@@ -3,6 +3,7 @@ class Post {
   final String mediaUrl;
   final String createdAt;
   final String unionId;
+  final String unionName;
   final String authorName;
   final String avatarUrl;
 
@@ -11,6 +12,7 @@ class Post {
     required this.mediaUrl,
     required this.createdAt,
     required this.unionId,
+    required this.unionName,
     required this.authorName,
     required this.avatarUrl,
   });
@@ -21,6 +23,7 @@ class Post {
       mediaUrl: message["media_url"],
       createdAt: message["created_at"],
       unionId: message["union_id"],
+      unionName: message["union_name"],
       authorName: message["author_name"],
       avatarUrl: message["avatar_url"],
     );

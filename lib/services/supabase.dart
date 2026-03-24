@@ -1,5 +1,4 @@
 import "dart:io";
-import "dart:ui_web";
 
 import "package:mime/mime.dart";
 import "package:path/path.dart";
@@ -156,19 +155,20 @@ class SupabaseService {
     final posts = await Supabase.instance.client
         .from("messages")
         .select("""
-        id,
-        media_url,
-        created_at,
-        ...unions!inner(
-          union_id:id
-        ),
-        ...profiles!inner(
-          author_name:username,
-          avatar_url
-        )
-        """)
+          id,
+          media_url,
+          created_at,
+          ...unions!inner(
+            union_id:id,
+            union_name:name
+          ),
+          ...profiles!inner(
+            author_name:username,
+            avatar_url
+          )
+          """)
         .eq("message_type", "media")
-        .range(alreadyLoaded, pageSize);
+        .range(alreadyLoaded, alreadyLoaded + pageSize - 1);
 
     return Post.fromList(posts).reversed.toList();
   }
