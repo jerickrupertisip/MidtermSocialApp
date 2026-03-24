@@ -1161,6 +1161,8 @@ class _PostImageStack extends StatelessWidget {
 
   const _PostImageStack({required this.imageProvider, required this.author});
 
+  void _onJoiningUnison() {}
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1173,7 +1175,25 @@ class _PostImageStack extends StatelessWidget {
           left: 0,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text(author, style: _kOverlayTextStyle),
+            child: Column(
+              crossAxisAlignment: .start,
+              children: [
+                Text(
+                  author,
+                  style: _kOverlayTextStyle.merge(TextStyle(fontSize: 24)),
+                ),
+                Row(
+                  spacing: 8,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _onJoiningUnison,
+                      child: Text("Join Unison"),
+                    ),
+                    Text("From Unison", style: _kOverlayTextStyle),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
