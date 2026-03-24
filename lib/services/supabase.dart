@@ -82,18 +82,25 @@ class SupabaseService {
     }
 
     var unisons = await Supabase.instance.client
-        .from("unisons")
+        .from("unions")
         .select("name")
-        .eq("name", name);
+        .eq("name", name)
+        .maybeSingle();
 
-    if (unisons.isNotEmpty) {
+    if (unisons != null) {
       throw "Unison named '$name' already exists, choose another name.";
     }
 
-    await Supabase.instance.client.from("unisons").insert({
-      "name": name,
-      "creator_id": id,
-    });
+    var newUnion = await Supabase.instance.client
+        .from("unions")
+        .insert({"name": name, "creator_id": id})
+        .select()
+        .maybeSingle();
+
+    if (newUnion == null) {
+      throw "Union wasn't created successfully";
+    }
+    await joinUnion(unionId: newUnion["id"]);
   }
 
   static Future<Message> sendMedia({

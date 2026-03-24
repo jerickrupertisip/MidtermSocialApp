@@ -340,10 +340,10 @@ class _CreateNewUnisonDialogState extends State<CreateNewUnisonDialog> {
     if (_createUnisonFormKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        SupabaseService.createUnison(name: _nameController.text);
+        await SupabaseService.createUnison(name: _nameController.text);
         if (mounted) Navigator.of(context).pop();
       } catch (e) {
-        debugLog(context, e.toString());
+        if (mounted) debugLog(context, e.toString());
       } finally {
         setState(() => _isLoading = false);
       }
