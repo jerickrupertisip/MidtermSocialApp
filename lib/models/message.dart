@@ -4,14 +4,14 @@ import "package:uniso_social_media_app/models/profile.dart";
 enum MessageType { message, media }
 
 class Message {
-  final MessageType type;
+  final MessageType messageType;
   final String? content;
   final String? mediaUrl;
   final DateTime createdAt;
   final Profile sentBy;
 
   Message({
-    required this.type,
+    required this.messageType,
     required this.content,
     required this.mediaUrl,
     required this.createdAt,
@@ -20,14 +20,14 @@ class Message {
 
   factory Message.fromMap(Map<String, dynamic> map, {Profile? profile}) {
     debugPrint(map.toString());
-    final type = switch (map["type"]) {
+    final messageType = switch (map["message_type"]) {
       "message" => MessageType.message,
       "media" => MessageType.media,
-      _ => throw ArgumentError("Invalid message type: ${map["type"]}"),
+      _ => throw ArgumentError("Invalid message type: ${map["message_type"]}"),
     };
 
     return Message(
-      type: type,
+      messageType: messageType,
       content: map["content"] as String?,
       mediaUrl: map["media_url"] as String?,
       createdAt: DateTime.parse(map["created_at"] as String),
@@ -49,7 +49,7 @@ class Message {
 
   Map<String, dynamic> toMap() {
     return {
-      "type": type == MessageType.message ? "message" : "media",
+      "message_type": messageType == MessageType.message ? "message" : "media",
       "content": content,
       "media_url": mediaUrl,
       "created_at": createdAt.toIso8601String(),

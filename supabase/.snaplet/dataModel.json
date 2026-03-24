@@ -2238,9 +2238,9 @@
           "maxLength": null
         },
         {
-          "id": "public.messages.type",
-          "name": "type",
-          "columnName": "type",
+          "id": "public.messages.message_type",
+          "name": "message_type",
+          "columnName": "message_type",
           "type": "text",
           "isRequired": true,
           "kind": "scalar",

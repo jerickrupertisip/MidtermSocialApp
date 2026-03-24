@@ -72,7 +72,7 @@ class SupabaseService {
     var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
-          "type": "media",
+          "message_type": "media",
           "content": null,
           "media_url": null, // leave null until we have the real URL
           "union_id": groupId,
@@ -119,7 +119,7 @@ class SupabaseService {
     var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
-          "type": "message",
+          "message_type": "message",
           "content": content,
           "media_url": null,
           "union_id": groupId,
@@ -148,7 +148,7 @@ class SupabaseService {
     final rows = await Supabase.instance.client
         .from("messages")
         .select(
-          "id, type, media_url, content, created_at, ...profiles!inner(user_id:id, username, avatar_url)",
+          "id, message_type, media_url, content, created_at, ...profiles!inner(user_id:id, username, avatar_url)",
         )
         .eq("union_id", unisonId)
         .order("created_at", ascending: false)

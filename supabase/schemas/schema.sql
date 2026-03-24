@@ -21,7 +21,7 @@ create table union_members (
 
 create table messages (
   id uuid default gen_random_uuid() primary key,
-  type text not null check (type in ('media', 'message')),
+  message_type text not null check (message_type in ('media', 'message')),
   content text,
   media_url text,
   union_id uuid references unions(id) on delete cascade not null,

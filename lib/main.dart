@@ -889,7 +889,7 @@ class _MessageBubble extends StatelessWidget {
         _buildMessageHeader(context),
         const SizedBox(height: 4),
         // Switch between Text and Image based on the message type
-        switch (message.type) {
+        switch (message.messageType) {
           MessageType.message => Text(
             message.content ?? '',
             style: const TextStyle(fontSize: 15),
