@@ -1,4 +1,3 @@
-import "package:flutter/cupertino.dart";
 import "package:uniso_social_media_app/models/profile.dart";
 
 enum MessageType { message, media }
