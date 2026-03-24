@@ -1,5 +1,6 @@
 import "dart:convert";
 import "dart:io";
+import "dart:ui";
 import "package:cached_network_image/cached_network_image.dart";
 import "package:easy_refresh/easy_refresh.dart";
 import "package:file_picker/file_picker.dart";
@@ -8,6 +9,7 @@ import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:form_builder_validators/form_builder_validators.dart";
 import "package:http/http.dart" as http;
+import "package:uniso_social_media_app/components/glass_overlay.dart";
 import "package:uniso_social_media_app/models/message.dart";
 import "package:uniso_social_media_app/models/picsum_image.dart";
 import "package:uniso_social_media_app/models/post.dart";
@@ -24,16 +26,15 @@ import "package:uniso_social_media_app/utils.dart";
 // Constants
 // ---------------------------------------------------------------------------
 
-const _kPostPageAnimationDuration = Duration(milliseconds: 300);
-const _kScrollAnimationDuration = Duration(milliseconds: 300);
-const _kNavAnimationDuration = Duration(milliseconds: 300);
-const _kSidebarWidth = 250.0;
-const _kMemberPanelWidth = 250.0;
-const _kDropShadow = Shadow(offset: Offset(1.9, -0.4), blurRadius: 6);
-const _kAvatarRadius = 24.0;
-const _kOverlayTextStyle = TextStyle(
+final _kPostPageAnimationDuration = Duration(milliseconds: 300);
+final _kScrollAnimationDuration = Duration(milliseconds: 300);
+final _kNavAnimationDuration = Duration(milliseconds: 300);
+final _kSidebarWidth = 250.0;
+final _kMemberPanelWidth = 250.0;
+final _kAvatarRadius = 24.0;
+final _kOverlayTextStyle = TextStyle(
   color: Colors.white,
-  shadows: [_kDropShadow],
+  shadows: [Shadow(offset: Offset.fromDirection(5), blurRadius: 6)],
 );
 
 // ---------------------------------------------------------------------------
@@ -1215,28 +1216,31 @@ class _PostImageStack extends StatelessWidget {
         Positioned(
           bottom: 0,
           left: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  post.authorName,
-                  style: _kOverlayTextStyle.merge(
-                    const TextStyle(fontSize: 24),
-                  ),
-                ),
-                Row(
-                  spacing: 8,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _onJoiningUnison,
-                      child: const Text("Join Union"),
+          child: GlassOverlay(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.authorName,
+                    style: _kOverlayTextStyle.merge(
+                      const TextStyle(fontSize: 24),
                     ),
-                    Text("From ${post.unionName}", style: _kOverlayTextStyle),
-                  ],
-                ),
-              ],
+                  ),
+                  Row(
+                    spacing: 8,
+                    children: [
+                      if (Supabase.instance.client.auth.currentUser != null)
+                        ElevatedButton(
+                          onPressed: _onJoiningUnison,
+                          child: const Text("Join Union"),
+                        ),
+                      Text("From ${post.unionName}", style: _kOverlayTextStyle),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
