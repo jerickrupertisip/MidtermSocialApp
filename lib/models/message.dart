@@ -1,36 +1,46 @@
+import "package:flutter/cupertino.dart";
 import "package:uniso_social_media_app/models/profile.dart";
 
+enum MessageType { message, media }
+
 class Message {
-  final String content;
+  final MessageType type;
+  final String? content;
+  final String? mediaUrl;
   final DateTime createdAt;
   final Profile sentBy;
 
   Message({
+    required this.type,
     required this.content,
+    required this.mediaUrl,
     required this.createdAt,
     required this.sentBy,
   });
 
-  factory Message.fromMap(Map<String, dynamic> message) {
-    return Message(
-      content: message["content"],
-      createdAt: DateTime.parse(message["created_at"]),
-      sentBy: Profile(
-        id: message["user_id"],
-        username: message["username"],
-        avatarUrl: message["avatar_url"],
-      ),
-    );
-  }
+  factory Message.fromMap(Map<String, dynamic> map, {Profile? profile}) {
+    debugPrint(map.toString());
+    // 1. Centralized Type Mapping
+    final type = switch (map["type"]) {
+      "message" => MessageType.message,
+      "media" => MessageType.media,
+      _ => throw ArgumentError("Invalid message type: ${map["type"]}"),
+    };
 
-  factory Message.fromMapWithProfile(
-    Map<String, dynamic> message,
-    Profile profile,
-  ) {
     return Message(
-      content: message["content"],
-      createdAt: DateTime.parse(message["created_at"]),
-      sentBy: profile,
+      type: type,
+      content: map["content"] as String?,
+      mediaUrl: map["media_url"] as String?,
+      createdAt: DateTime.parse(map["created_at"] as String),
+      // 2. Conditional Profile Logic
+      // If a profile is passed in, use it; otherwise, build it from the map.
+      sentBy:
+          profile ??
+          Profile(
+            id: map["user_id"] as String,
+            username: map["username"] as String,
+            avatarUrl: map["avatar_url"] as String?,
+          ),
     );
   }
 

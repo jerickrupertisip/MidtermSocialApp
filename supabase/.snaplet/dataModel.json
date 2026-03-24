@@ -2172,7 +2172,7 @@
           "name": "content",
           "columnName": "content",
           "type": "text",
-          "isRequired": true,
+          "isRequired": false,
           "kind": "scalar",
           "isList": false,
           "isGenerated": false,
@@ -2214,6 +2214,34 @@
           "name": "user_id",
           "columnName": "user_id",
           "type": "uuid",
+          "isRequired": true,
+          "kind": "scalar",
+          "isList": false,
+          "isGenerated": false,
+          "sequence": false,
+          "hasDefaultValue": false,
+          "isId": false,
+          "maxLength": null
+        },
+        {
+          "id": "public.messages.media_url",
+          "name": "media_url",
+          "columnName": "media_url",
+          "type": "text",
+          "isRequired": false,
+          "kind": "scalar",
+          "isList": false,
+          "isGenerated": false,
+          "sequence": false,
+          "hasDefaultValue": false,
+          "isId": false,
+          "maxLength": null
+        },
+        {
+          "id": "public.messages.type",
+          "name": "type",
+          "columnName": "type",
+          "type": "text",
           "isRequired": true,
           "kind": "scalar",
           "isList": false,
@@ -4071,7 +4099,7 @@
           "isList": false,
           "isGenerated": false,
           "sequence": false,
-          "hasDefaultValue": true,
+          "hasDefaultValue": false,
           "isId": true,
           "maxLength": null
         },
@@ -4116,6 +4144,24 @@
           "hasDefaultValue": true,
           "isId": false,
           "maxLength": null
+        },
+        {
+          "name": "users",
+          "type": "users",
+          "isRequired": true,
+          "kind": "object",
+          "relationName": "profilesTousers",
+          "relationFromFields": [
+            "id"
+          ],
+          "relationToFields": [
+            "id"
+          ],
+          "isList": false,
+          "isId": false,
+          "isGenerated": false,
+          "sequence": false,
+          "hasDefaultValue": false
         },
         {
           "name": "public_messages",
@@ -5282,50 +5328,6 @@
           "name": "secrets_name_idx",
           "fields": [
             "name"
-          ],
-          "nullNotDistinct": false
-        }
-      ]
-    },
-    "seed_files": {
-      "id": "supabase_migrations.seed_files",
-      "schemaName": "supabase_migrations",
-      "tableName": "seed_files",
-      "fields": [
-        {
-          "id": "supabase_migrations.seed_files.path",
-          "name": "path",
-          "columnName": "path",
-          "type": "text",
-          "isRequired": true,
-          "kind": "scalar",
-          "isList": false,
-          "isGenerated": false,
-          "sequence": false,
-          "hasDefaultValue": false,
-          "isId": true,
-          "maxLength": null
-        },
-        {
-          "id": "supabase_migrations.seed_files.hash",
-          "name": "hash",
-          "columnName": "hash",
-          "type": "text",
-          "isRequired": true,
-          "kind": "scalar",
-          "isList": false,
-          "isGenerated": false,
-          "sequence": false,
-          "hasDefaultValue": false,
-          "isId": false,
-          "maxLength": null
-        }
-      ],
-      "uniqueConstraints": [
-        {
-          "name": "seed_files_pkey",
-          "fields": [
-            "path"
           ],
           "nullNotDistinct": false
         }
@@ -7128,6 +7130,20 @@
           "isRequired": false,
           "kind": "object",
           "relationName": "webauthn_credentialsTousers",
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isList": true,
+          "isId": false,
+          "isGenerated": false,
+          "sequence": false,
+          "hasDefaultValue": false
+        },
+        {
+          "name": "profiles",
+          "type": "profiles",
+          "isRequired": false,
+          "kind": "object",
+          "relationName": "profilesTousers",
           "relationFromFields": [],
           "relationToFields": [],
           "isList": true,

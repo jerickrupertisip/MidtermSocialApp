@@ -136,7 +136,9 @@ const main = async () => {
       const membership = union_members[index % union_members.length];
 
       return {
+        type: "message",
         content: `Message #${index + 1}`,
+        media_url: null,
         created_at: new Date(
           startDate.getTime() + index * 60_000
         ).toISOString(),

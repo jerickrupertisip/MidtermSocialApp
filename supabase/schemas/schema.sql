@@ -1,5 +1,5 @@
 create table profiles (
- id uuid references auth.users(id) on delete cascade,
+ id uuid primary key references auth.users(id) on delete cascade,
  username text unique not null,
  avatar_url text,
  created_at timestamp with time zone default now()
@@ -21,7 +21,9 @@ create table union_members (
 
 create table messages (
   id uuid default gen_random_uuid() primary key,
-  content text not null,
+  type text NOT NULL CHECK (type IN ('media', 'message')),
+  content text,
+  media_url text,
   union_id uuid references unions(id) on delete cascade not null,
   user_id uuid references profiles(id) on delete cascade not null,
   created_at timestamp with time zone default now()

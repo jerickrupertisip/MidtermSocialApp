@@ -394,7 +394,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
       TextEditingController();
   RealtimeChannel? _supabaseRoomChannel;
   bool _isMessageSending = false;
-  List<File> _selectedFiles = [];
+  final List<File> _selectedFiles = [];
 
   bool get _isGroupSelected => widget.unisonGroup != null;
 
@@ -452,7 +452,7 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 
   void _onUploadPressed() async {
     var selectedFile = await FilePicker.platform.pickFiles(
-      type: FileType.media,
+      type: FileType.image,
     );
 
     var path = selectedFile?.files.single.path;
@@ -851,8 +851,23 @@ class _MessageBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildMessageHeader(context),
-        const SizedBox(height: 2),
-        Text(message.content, style: const TextStyle(fontSize: 15)),
+        const SizedBox(height: 4),
+        // Switch between Text and Image based on the message type
+        switch (message.type) {
+          MessageType.message => Text(
+            message.content ?? '',
+            style: const TextStyle(fontSize: 15),
+          ),
+          MessageType.media => ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              message.mediaUrl ?? '',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.broken_image),
+            ),
+          ),
+        },
       ],
     );
   }

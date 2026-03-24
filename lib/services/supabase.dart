@@ -33,14 +33,16 @@ class SupabaseService {
     );
   }
 
-  static Future<Message> sendMessage({
-    required String content,
+  static Future<Message> sendMedia({
+    required String? mediaUrl,
     required String groupId,
   }) async {
     var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
-          "content": content,
+          "type": "media",
+          "content": null,
+          "media_url": mediaUrl,
           "union_id": groupId,
           "user_id": Supabase.instance.client.auth.currentUser?.id,
         })
@@ -49,7 +51,28 @@ class SupabaseService {
     var user = Supabase.instance.client.auth.currentUser!;
     var profile = Profile.fromUser(user);
 
-    return Message.fromMapWithProfile(newMessage, profile);
+    return Message.fromMap(newMessage, profile: profile);
+  }
+
+  static Future<Message> sendMessage({
+    required String? content,
+    required String groupId,
+  }) async {
+    var newMessage = await Supabase.instance.client
+        .from("messages")
+        .insert({
+          "type": "message",
+          "content": content,
+          "media_url": null,
+          "union_id": groupId,
+          "user_id": Supabase.instance.client.auth.currentUser?.id,
+        })
+        .select()
+        .single();
+    var user = Supabase.instance.client.auth.currentUser!;
+    var profile = Profile.fromUser(user);
+
+    return Message.fromMap(newMessage, profile: profile);
   }
 
   static void broadcastMessage({
@@ -67,7 +90,7 @@ class SupabaseService {
     final rows = await Supabase.instance.client
         .from("messages")
         .select(
-          "id, content, created_at, ...profiles!inner(user_id:id, username, avatar_url)",
+          "id, type, media_url, content, created_at, ...profiles!inner(user_id:id, username, avatar_url)",
         )
         .eq("union_id", unisonId)
         .order("created_at", ascending: false)
