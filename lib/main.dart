@@ -437,26 +437,46 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
   Future<void> _submitOutgoingMessage() async {
     final groupId = widget.unisonGroup?.id;
     if (groupId == null) return;
-
     final channel = _supabaseRoomChannel;
     if (channel == null) return;
 
-    final messageContent = _outgoingMessageController.text;
-    if (messageContent.isEmpty) return;
+    final messageContent = _outgoingMessageController.text.trim();
+    final hasFiles = _selectedFiles.isNotEmpty;
+    final hasText = messageContent.isNotEmpty;
+
+    // Abort if there's nothing to send
+    if (!hasFiles && !hasText) return;
 
     _outgoingMessageController.clear();
     setState(() => _isMessageSending = true);
 
     try {
-      // Delegate persistence and broadcast to the service.
-      final insertedMessageData = await SupabaseService.sendMessage(
-        content: messageContent,
-        groupId: groupId,
-      );
-      SupabaseService.broadcastMessage(
-        channel: channel,
-        messageData: insertedMessageData.toMap(),
-      );
+      if (hasFiles) {
+        for (var mediaPath in _selectedFiles) {
+          final insertedMessageData = await SupabaseService.sendMedia(
+            mediaPath: mediaPath.path,
+            groupId: groupId,
+          );
+
+          SupabaseService.broadcastMessage(
+            channel: channel,
+            messageData: insertedMessageData.toMap(),
+          );
+        }
+
+        _selectedFiles.clear();
+      }
+
+      if (hasText) {
+        final insertedMessageData = await SupabaseService.sendMessage(
+          content: messageContent,
+          groupId: groupId,
+        );
+        SupabaseService.broadcastMessage(
+          channel: channel,
+          messageData: insertedMessageData.toMap(),
+        );
+      }
     } catch (sendError) {
       if (mounted) {
         debugLog(context, sendError.toString());
@@ -474,7 +494,6 @@ class _UnisonChatInputScreenState extends State<UnisonChatInputScreen> {
 
     var path = selectedFile?.files.single.path;
     if (path != null) {
-      debugPrint(path);
       setState(() {
         _selectedFiles.add(File(path));
       });

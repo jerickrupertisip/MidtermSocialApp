@@ -21,10 +21,17 @@ create table union_members (
 
 create table messages (
   id uuid default gen_random_uuid() primary key,
-  type text NOT NULL CHECK (type IN ('media', 'message')),
+  type text not null check (type in ('media', 'message')),
   content text,
   media_url text,
   union_id uuid references unions(id) on delete cascade not null,
   user_id uuid references profiles(id) on delete cascade not null,
   created_at timestamp with time zone default now()
 );
+
+create policy "Disable RLS for specific bucket"
+on storage.objects
+for all
+to public
+using (bucket_id = 'medias')
+with check (bucket_id = 'medias');

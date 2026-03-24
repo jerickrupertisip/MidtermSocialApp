@@ -1,3 +1,4 @@
+import "package:flutter/material.dart";
 import "package:uniso_social_media_app/models/profile.dart";
 
 enum MessageType { message, media }
@@ -18,7 +19,7 @@ class Message {
   });
 
   factory Message.fromMap(Map<String, dynamic> map, {Profile? profile}) {
-    // 1. Centralized Type Mapping
+    debugPrint(map.toString());
     final type = switch (map["type"]) {
       "message" => MessageType.message,
       "media" => MessageType.media,
@@ -48,7 +49,9 @@ class Message {
 
   Map<String, dynamic> toMap() {
     return {
+      "type": type == MessageType.message ? "message" : "media",
       "content": content,
+      "media_url": mediaUrl,
       "created_at": createdAt.toIso8601String(),
       "user_id": sentBy.id,
       "username": sentBy.username,

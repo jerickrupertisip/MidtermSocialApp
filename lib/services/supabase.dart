@@ -1,3 +1,5 @@
+import "dart:io";
+
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:uniso_social_media_app/models/message.dart";
@@ -29,7 +31,7 @@ class SupabaseService {
     final rows = await Supabase.instance.client
         .from("unions")
         .select("id, name, ...union_members!inner()")
-        .eq('union_members.user_id', id);
+        .eq("union_members.user_id", id);
     return UnisonGroup.fromList(rows);
   }
 
@@ -63,22 +65,49 @@ class SupabaseService {
   }
 
   static Future<Message> sendMedia({
-    required String? mediaUrl,
+    required String mediaPath,
     required String groupId,
   }) async {
+    // 1. Insert the message first to get the generated id
     var newMessage = await Supabase.instance.client
         .from("messages")
         .insert({
           "type": "media",
           "content": null,
-          "media_url": mediaUrl,
+          "media_url": null, // leave null until we have the real URL
           "union_id": groupId,
           "user_id": Supabase.instance.client.auth.currentUser?.id,
         })
         .select()
         .single();
-    var user = Supabase.instance.client.auth.currentUser!;
-    var profile = Profile.fromUser(user);
+
+    final messageId = newMessage["id"].toString();
+
+    // 2. Upload the file using the message id as the filename
+    final fileExtension = mediaPath.contains(".")
+        ? ".${mediaPath.split(".").last}"
+        : "";
+    final newPath = "$messageId$fileExtension";
+
+    await Supabase.instance.client.storage
+        .from("medias")
+        .upload(newPath, File(mediaPath));
+
+    // 3. Get the public URL
+    final publicUrl = Supabase.instance.client.storage
+        .from("medias")
+        .getPublicUrl(newPath);
+
+    // 4. Update the message row with the public URL
+    newMessage = await Supabase.instance.client
+        .from("messages")
+        .update({"media_url": publicUrl})
+        .eq("id", messageId)
+        .select()
+        .single();
+
+    final user = Supabase.instance.client.auth.currentUser!;
+    final profile = Profile.fromUser(user);
 
     return Message.fromMap(newMessage, profile: profile);
   }
