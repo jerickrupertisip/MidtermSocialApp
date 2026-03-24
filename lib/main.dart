@@ -850,6 +850,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
 
   Future<void> _fetchNextBatchOfPostImages() async {
     if (_isFetchingPostImages) return;
+    if (!mounted) return;
+
     setState(() => _isFetchingPostImages = true);
 
     try {
