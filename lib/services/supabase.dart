@@ -204,7 +204,6 @@ class SupabaseService {
           """)
         .eq("message_type", "media")
         .range(alreadyLoaded, alreadyLoaded + pageSize - 1);
-
     return Post.fromList(posts).reversed.toList();
   }
 
