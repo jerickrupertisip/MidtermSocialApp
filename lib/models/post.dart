@@ -25,7 +25,7 @@ class Post {
       unionId: message["union_id"],
       unionName: message["union_name"],
       authorName: message["author_name"],
-      avatarUrl: message["avatar_url"],
+      avatarUrl: message["avatar_url"] ?? "",
     );
   }
 
